@@ -1,14 +1,18 @@
+﻿using ECommerceSystem.Api.Data;
+using ECommerceSystem.Api.Data.Mongo;
+using ECommerceSystem.Shared.Documents; // Thêm namespace này
+using Microsoft.EntityFrameworkCore;
+using MongoDB.Driver;
+using System;
 
 namespace ECommerceSystem.Api.Services
 {
-
-
     public class DataSyncService
     {
-        private readonly WebDbContext _dbContext;
+        private readonly WebDBContext _dbContext; // Sửa từ WebDBContext thành AppDbContext
         private readonly MongoDbContext _mongoContext;
 
-        public DataSyncService(AppDbContext dbContext, MongoDbContext mongoContext)
+        public DataSyncService(WebDBContext dbContext, MongoDbContext mongoContext)
         {
             _dbContext = dbContext;
             _mongoContext = mongoContext;
@@ -23,7 +27,7 @@ namespace ECommerceSystem.Api.Services
 
             foreach (var product in products)
             {
-                var productDoc = new
+                var productDoc = new ProductDocument
                 {
                     ProductId = product.Id,
                     Name = product.Name,
