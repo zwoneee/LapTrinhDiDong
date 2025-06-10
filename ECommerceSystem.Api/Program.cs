@@ -1,5 +1,6 @@
 using AspNetCoreRateLimit;
 using ECommerceSystem.Api.Data;
+using ECommerceSystem.Api.Data.Mongo;
 using ECommerceSystem.Api.Hubs;
 using ECommerceSystem.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -14,19 +15,28 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
 
-// Entity Framework Core với SQL Server
+// OpenAPI / Swagger
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+// EF Core - SQL Server
 builder.Services.AddDbContext<WebDBContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Identity
 builder.Services.AddIdentity<IdentityUser, IdentityRole>()
-    .AddEntityFrameworkStores<WebDBContext>().AddDefaultTokenProviders();
+    .AddEntityFrameworkStores<WebDBContext>()
+    .AddDefaultTokenProviders();
 
 // MongoDB
-builder.Services.AddSingleton<IMongoClient>(sp =>
-    new MongoClient(builder.Configuration.GetConnectionString("MongoDb")));
+builder.Services.AddSingleton<MongoDbContext>(sp =>
+{
+    var connectionString = builder.Configuration["Mongo:ConnectionString"];
+    var databaseName = builder.Configuration["Mongo:DatabaseName"];
+    return new MongoDbContext(connectionString, databaseName);
+});
+
 
 // Redis
 builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
@@ -34,13 +44,16 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 
 // SignalR
 builder.Services.AddSignalR();
-//Services
-builder.Services.AddControllers();
+
 // Rate Limiting
 builder.Services.AddMemoryCache();
 builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
 builder.Services.AddInMemoryRateLimiting();
+builder.Services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
+builder.Services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
 builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
+
+// Authentication - JWT
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -56,30 +69,30 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
     };
 });
-//Add DI
+
+// DI Services
 builder.Services.AddScoped<DataSyncService>();
-//builder.Services.AddScoped<AnalyticsService>();
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Swagger
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
+// Middlewares
 app.UseHttpsRedirection();
 
-// Rate Limiting
 app.UseIpRateLimiting();
 
-app.UseAuthorization();
-app.UseHttpsRedirection();
 app.UseRouting();
+
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
 app.MapHub<NotificationHub>("/notificationHub");
-app.MapControllers();
-//app.MapHub<YourHub>("/yourhub"); // Thay YourHub bằng tên Hub thực tế
 
 app.Run();

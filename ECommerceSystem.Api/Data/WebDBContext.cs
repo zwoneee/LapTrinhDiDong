@@ -1,9 +1,12 @@
 using ECommerceSystem.Shared.Entities;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECommerceSystem.Api.Data
 {
-    public class WebDBContext : DbContext
+    public class WebDBContext : IdentityDbContext<IdentityUser>
+
     {
         public WebDBContext(DbContextOptions<WebDBContext> options) : base(options) { }
 
