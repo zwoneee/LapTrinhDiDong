@@ -1,0 +1,28 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin - ECommerce System</title>
+    <link rel="stylesheet" href="~/css/site.css" />
+    <link rel="stylesheet" href="~/css/admin.css" />
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a asp-controller="Admin" asp-action="Dashboard">Dashboard</a></li>
+                <li><partial name="_RoleBadgePartial" /></li>
+                <li><partial name="_Notifications" /></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        @RenderBody()
+    </main>
+    <footer>
+        <p>&copy; 2025 ECommerce System</p>
+    </footer>
+    <script src="~/js/site.js"></script>
+</body>
+</html>

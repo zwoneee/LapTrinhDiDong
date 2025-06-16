@@ -1,0 +1,28 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ECommerce System</title>
+    <link rel="stylesheet" href="~/css/site.css" />
+    <link rel="stylesheet" href="~/css/layout.css" />
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><partial name="LoginPartial" /></li>
+                <li><partial name="_CartDetail" /></li>
+                <li><partial name="_Suggestions" /></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        @RenderBody()
+    </main>
+    <footer>
+        <p>&copy; 2025 ECommerce System</p>
+    </footer>
+    <script src="~/js/site.js"></script>
+</body>
+</html>

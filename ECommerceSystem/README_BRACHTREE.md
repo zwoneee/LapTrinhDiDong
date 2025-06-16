@@ -1,4 +1,4 @@
-ECommerceSystem.sln
+﻿ECommerceSystem.sln
 ├── ECommerceSystem (ASP.NET Core MVC - Frontend)
 │   ├── Controllers
 │   │   ├── HomeController.cs
@@ -40,11 +40,12 @@ ECommerceSystem.sln
 │   │   ├── Admin
 │   │   │   ├── Dashboard.cshtml
 │   │   ├── Account
-│   │   │   ├── Login.cshtml
+│   │   │   ├── Login.cshtml Mô tả: Trang đăng nhập với xác thực người dùng.
 │   │   │   ├── Register.cshtml
 │   │   │   ├── Profile.cshtml
 │   │   │   ├── ChangePassword.cshtml
-│   │   ├── _ViewStart.cshtml
+│   │   ├── _ViewStart.cshtml Mô tả: Chọn layout động dựa trên vai trò người dùng, mặc định là _CustomerLayout.cshtml nếu không đăng nhập.
+│   │   ├── _ViewImport.cshtml
 │   ├── wwwroot
 │   │   ├── css
 │   │   │   ├── site.css

@@ -1,3 +1,8 @@
 ﻿@{
-    Layout = "_Layout";
+    var layout = User?.Identity?.IsAuthenticated == true
+        ? (User.IsInRole("Admin") ? "~/Views/Shared/_AdminLayout.cshtml"
+          : User.IsInRole("Seller") ? "~/Views/Shared/_SellerLayout.cshtml"
+          : "~/Views/Shared/_CustomerLayout.cshtml")
+        : "~/Views/Shared/_CustomerLayout.cshtml";
+    Layout = layout;
 }

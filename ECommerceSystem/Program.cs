@@ -4,7 +4,29 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
-
+app.Use(async (context, next) =>
+{
+    if (context.User.Identity?.IsAuthenticated == true && context.User.IsInRole("Admin"))
+    {
+        if (context.Request.Path.StartsWithSegments("/admin"))
+        {
+            await next();
+        }
+        else
+        {
+            context.Response.Redirect("/admin/dashboard");
+        }
+    }
+    else if (context.User.Identity?.IsAuthenticated == true)
+    {
+        context.Response.Redirect("/products");
+    }
+    else
+    {
+        context.Response.Redirect("/products");
+    }
+    await next();
+});
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {

@@ -1,12 +1,24 @@
+using ECommerceSystem.Shared.IHub;
 using Microsoft.AspNetCore.SignalR;
 
 namespace ECommerceSystem.Api.Hubs
 {
-    public class NotificationHub : Hub
+    public class NotificationHub : Hub<IEcommerceHubClient>
     {
-        public async Task SendOrderUpdate(int orderId, string status)
+        public override Task OnConnectedAsync()
         {
-            await Clients.All.SendAsync("ReceiveOrderUpdate", orderId, status);
+            // Handle when a client connects
+            return base.OnConnectedAsync();
         }
+        public override Task OnDisconnectedAsync(Exception? exception)
+        {
+            // Handle when a client disconnects
+            return base.OnDisconnectedAsync(exception);
+        }
+
+        //public async Task SendOrderUpdate(int orderId, string status)
+        //{
+        //    await Clients.All.SendAsync("ReceiveOrderUpdate", orderId, status);
+        //}
     }
 }
