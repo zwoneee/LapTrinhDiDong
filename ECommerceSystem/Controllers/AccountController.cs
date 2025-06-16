@@ -1,19 +1,21 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace ECommerceSystem.Controllers
 {
     public class AccountController : Controller
     {
-        private readonly UserManager<IdentityUser> _userManager;
-        private readonly SignInManager<IdentityUser> _signInManager;
+        private readonly IHttpClientFactory _httpClientFactory;
 
-        public AccountController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager)
+        public AccountController(IHttpClientFactory httpClientFactory)
         {
-            _userManager = userManager;
-            _signInManager = signInManager;
+            _httpClientFactory = httpClientFactory;
         }
 
         [HttpGet]
@@ -25,11 +27,27 @@ namespace ECommerceSystem.Controllers
         [HttpPost]
         public async Task<IActionResult> Login(string username, string password)
         {
-            var result = await _signInManager.PasswordSignInAsync(username, password, false, false);
-            if (result.Succeeded)
+            var client = _httpClientFactory.CreateClient();
+            var content = new StringContent(JsonSerializer.Serialize(new { Username = username, Password = password }), Encoding.UTF8, "application/json");
+            var response = await client.PostAsync("https://localhost:7068/api/auth/login", content);
+
+            if (response.IsSuccessStatusCode)
             {
-                return RedirectToAction("Index", "Home");
+                var result = await response.Content.ReadFromJsonAsync<dynamic>();
+                var token = result.token;
+                var role = result.role;
+
+                Response.Cookies.Append("JwtToken", token, new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.Strict,
+                    Expires = DateTimeOffset.Now.AddHours(1)
+                });
+
+                return RedirectToAction(role == "Admin" ? "Dashboard" : "Index", role == "Admin" ? "Admin" : "Home");
             }
+            ViewBag.Error = "Invalid username or password.";
             return View();
         }
 
@@ -40,37 +58,11 @@ namespace ECommerceSystem.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Register(string username, string password)
-        {
-            var user = new IdentityUser { UserName = username, Email = username };
-            var result = await _userManager.CreateAsync(user, password);
-            if (result.Succeeded)
-            {
-                await _signInManager.SignInAsync(user, false);
-                return RedirectToAction("Index", "Home");
-            }
-            return View();
-        }
-
-        [HttpGet]
-        [Authorize]
-        public IActionResult Profile()
-        {
-            return View();
-        }
-
-        [HttpGet]
-        [Authorize]
-        public IActionResult ChangePassword()
-        {
-            return View();
-        }
-
-        [HttpPost]
         [Authorize]
         public async Task<IActionResult> Logout()
         {
-            await _signInManager.SignOutAsync();
+            Response.Cookies.Delete("JwtToken");
+            await HttpContext.SignOutAsync();
             return RedirectToAction("Index", "Home");
         }
     }

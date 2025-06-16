@@ -1,51 +1,73 @@
-var builder = WebApplication.CreateBuilder(args);
+﻿var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// ✅ Đăng ký dịch vụ trước khi build
 builder.Services.AddControllersWithViews();
+builder.Services.AddHttpClient(); // <-- Fix ở đây
 
 var app = builder.Build();
+
+// 🔒 Middleware kiểm tra xác thực và quyền truy cập
 app.Use(async (context, next) =>
 {
-    if (context.User.Identity?.IsAuthenticated == true && context.User.IsInRole("Admin"))
+    var path = context.Request.Path;
+
+    if (context.User.Identity?.IsAuthenticated == true)
     {
-        if (context.Request.Path.StartsWithSegments("/admin"))
+        if (context.User.IsInRole("Admin"))
         {
-            await next();
+            // Nếu đã ở admin, tiếp tục
+            if (path.StartsWithSegments("/admin"))
+            {
+                await next();
+            }
+            else
+            {
+                context.Response.Redirect("/admin/dashboard");
+            }
         }
         else
         {
-            context.Response.Redirect("/admin/dashboard");
+            // Người dùng thường, nếu chưa ở /products thì redirect
+            if (!path.StartsWithSegments("/products"))
+            {
+                context.Response.Redirect("/products");
+            }
+            else
+            {
+                await next();
+            }
         }
-    }
-    else if (context.User.Identity?.IsAuthenticated == true)
-    {
-        context.Response.Redirect("/products");
     }
     else
     {
-        context.Response.Redirect("/products");
+        // Chưa đăng nhập, nếu chưa ở /products thì redirect
+        if (!path.StartsWithSegments("/products"))
+        {
+            context.Response.Redirect("/products");
+        }
+        else
+        {
+            await next();
+        }
     }
-    await next();
 });
-// Configure the HTTP request pipeline.
+
+
+// 🔧 Middleware mặc định
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles(); // Cần để phục vụ static assets (nếu có)
 app.UseRouting();
-
 app.UseAuthorization();
 
-app.MapStaticAssets();
-
+// 🔀 Định tuyến
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}")
-    .WithStaticAssets();
-
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();

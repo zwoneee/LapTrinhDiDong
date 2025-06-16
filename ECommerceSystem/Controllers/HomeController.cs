@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace ECommerceSystem.Controllers
 {
@@ -13,9 +15,24 @@ namespace ECommerceSystem.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var client = _httpClientFactory.CreateClient();
-            var suggestions = await client.GetFromJsonAsync<dynamic>("https://localhost:7068/api/suggestions");
-            ViewBag.Suggestions = suggestions;
+            try
+            {
+                var client = _httpClientFactory.CreateClient("ApiClient");
+                var response = await client.GetAsync("api/suggestions");
+                if (response.IsSuccessStatusCode)
+                {
+                    var suggestions = await response.Content.ReadFromJsonAsync<dynamic>();
+                    ViewBag.Suggestions = suggestions;
+                }
+                else
+                {
+                    ViewBag.Error = "Failed to load suggestions.";
+                }
+            }
+            catch
+            {
+                ViewBag.Error = "Error connecting to API.";
+            }
             return View();
         }
     }

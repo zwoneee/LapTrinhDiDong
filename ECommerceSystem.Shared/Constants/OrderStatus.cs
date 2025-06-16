@@ -19,5 +19,10 @@ namespace ECommerceSystem.Shared.Constants
         public const string Admin = "Admin";
         public const string User = "User";
     }
-
+    public static class AppConstants
+    {
+        public const string ApiBaseUrl = "https://localhost:7068";
+        public const string HubPattern = "/hubs/social-hub";
+        public const string HubFullUrl = ApiBaseUrl + HubPattern;
+    }
 }

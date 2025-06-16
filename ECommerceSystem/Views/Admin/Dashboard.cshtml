@@ -22,44 +22,81 @@
     </div>
     <div class="inventory">
         <h3>Cảnh báo tồn kho</h3>
-        <ul>
-            @foreach (var item in Model.LowStock)
-            {
-                <li>@item.Name - Số lượng: @item.Stock</li>
-            }
-        </ul>
+        @if (Model.LowStock != null && Model.LowStock.Any())
+        {
+            <ul>
+                @foreach (var item in Model.LowStock)
+                {
+                    <li>@item.Name - Số lượng: @item.Stock</li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p>Không có sản phẩm tồn kho thấp.</p>
+        }
     </div>
     <div class="activity">
         <h3>Hoạt động người dùng</h3>
-        <ul>
-            @foreach (var act in Model.Activities)
-            {
-                <li>@act.Action: @act.Count lần</li>
-            }
-        </ul>
+        @if (Model.Activities != null && Model.Activities.Any())
+        {
+            <ul>
+                @foreach (var act in Model.Activities)
+                {
+                    <li>@act.UserName - @act.ActivityType: @act.Count lần (@act.Time)</li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p>Không có hoạt động gần đây.</p>
+        }
     </div>
 </div>
 
 @section Scripts {
-    <script src="~/js/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         async function loadStats() {
             const type = document.getElementById('statType').value;
             const period = document.getElementById('statPeriod').value;
-            const response = await fetch(`/api/admin/statistics?type=${type}&period=${period}`);
-            const data = await response.json();
-            const ctx = document.getElementById('statsChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: data.Revenue?.map(r => r.Date) || data.OrderCount?.map(r => r.Status) || data.TopProducts?.map(r => r.Name),
-                    datasets: [{
-                        label: type,
-                        data: data.Revenue?.map(r => r.Value) || data.OrderCount?.map(r => r.Count) || data.TopProducts?.map(r => r.Quantity),
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)'
-                    }]
+            try {
+                const response = await fetch(`/api/admin/statistics?type=${type}&period=${period}`);
+                if (!response.ok) {
+                    console.error('Failed to load statistics:', response.status);
+                    return;
                 }
-            });
+                const data = await response.json();
+                const ctx = document.getElementById('statsChart').getContext('2d');
+
+                // Destroy existing chart if it exists
+                if (window.statsChart) {
+                    window.statsChart.destroy();
+                }
+
+                window.statsChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.revenue?.map(r => r.date) || Object.keys(data.orderCount || {}) || data.topProducts?.map(p => p.name) || [],
+                        datasets: [{
+                            label: type,
+                            data: data.revenue?.map(r => r.value) || Object.values(data.orderCount || {}) || data.topProducts?.map(p => p.quantity) || [],
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
         }
         loadStats();
     </script>
