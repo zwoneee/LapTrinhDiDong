@@ -6,9 +6,11 @@ namespace ECommerceSystem.GUI.Controllers
     [Authorize(Roles = "Admin")]
     public class AdminController : Controller
     {
+        
         public IActionResult Index()
         {
-            return View();
+            var model = new { TotalUsers = 100, TotalProducts = 50, TotalOrders = 200 };
+            return View(model);
         }
     }
 }

@@ -1,23 +1,59 @@
 ﻿using ECommerceSystem.GUI.Apis;
+// Nếu AuthRetryHandler nằm trong namespace này
 using ECommerceSystem.GUI.Services;
 using ECommerceSystem.GUI.Services.ECommerceSystem.GUI.Handlers;
 using ECommerceSystem.Shared.Constants;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using Refit;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
-ConfigureRefit(builder.Services);
-
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddTransient<AuthRetryHandler>();
-// ✅ thêm dòng này
+ConfigureRefit(builder.Services);
 
-//services.AddRefitClient<IUserApi>()
-//    .AddHttpMessageHandler<AuthRetryHandler>() // ✅ gắn handler
-//    .ConfigureHttpClient(SetHttpClient);
+// Cấu hình xác thực
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = "MyCookieAuth"; // Sử dụng scheme tùy chỉnh
+    options.DefaultChallengeScheme = "MyCookieAuth";
+})
+.AddCookie("MyCookieAuth", options =>
+{
+    options.LoginPath = "/Account/Login";
+    options.AccessDeniedPath = "/Home/Error";
+    options.ExpireTimeSpan = TimeSpan.FromHours(1);
+    options.SlidingExpiration = true;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"], // Thay bằng issuer từ API của bạn
+        ValidAudience = builder.Configuration["Jwt:Audience"], // Thay bằng audience từ API
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])) // Thay bằng key từ API
+    };
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            // Lấy token từ cookie thay vì header Authorization
+            context.Token = context.Request.Cookies["AuthToken"];
+            return Task.CompletedTask;
+        }
+    };
+});
 
 var app = builder.Build();
 
@@ -25,39 +61,36 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
+
 app.UseRouting();
 
+app.UseAuthentication(); // Thêm middleware xác thực
 app.UseAuthorization();
-
-app.MapStaticAssets();
 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}")
-    .WithStaticAssets();
-
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
-// ✅ Định nghĩa phương thức ConfigureRefit sau app.Run()
+
+// ConfigureRefit
 static void ConfigureRefit(IServiceCollection services)
 {
     services.AddRefitClient<IAuthApi>()
         .AddHttpMessageHandler<AuthRetryHandler>()
         .ConfigureHttpClient(SetHttpClient);
 
-
     void SetHttpClient(HttpClient httpClient)
     {
-        httpClient.BaseAddress = new Uri(AppConstants.ApiBaseUrl); // ✅ nhớ cập nhật AppConstants
+        httpClient.BaseAddress = new Uri(AppConstants.ApiBaseUrl);
         httpClient.Timeout = TimeSpan.FromSeconds(20);
         Console.WriteLine($"[Refit] BaseAddress set to: {httpClient.BaseAddress}");
     }
-
-
-
+  
+    
 }

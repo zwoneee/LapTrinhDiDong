@@ -1,5 +1,7 @@
-﻿using ECommerceSystem.Shared.DTOs;
-using ECommerceSystem.GUI.Apis;
+﻿using ECommerceSystem.GUI.Apis;
+using ECommerceSystem.Shared.DTOs;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 using Refit;
 using System.IdentityModel.Tokens.Jwt;
@@ -23,30 +25,45 @@ namespace ECommerceSystem.GUI.Services
         }
 
 
-        public async Task<bool> LoginAsync(LoginModel model)
+        public async Task<(bool Success, string Role)> LoginAsync(LoginModel model)
         {
             try
             {
                 var response = await _authApi.Login(model);
 
-                // Ghi log phản hồi từ API
-                Console.WriteLine($"Login API Response: {JsonSerializer.Serialize(response)}");
-
                 if (!string.IsNullOrWhiteSpace(response.Token))
                 {
                     SaveTokenToCookie(response.Token);
-                    return true;
+
+                    var handler = new JwtSecurityTokenHandler();
+                    var jwtToken = handler.ReadToken(response.Token) as JwtSecurityToken;
+
+                    var role = jwtToken?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
+
+                    if (jwtToken != null)
+                    {
+                        var claimsIdentity = new ClaimsIdentity(jwtToken.Claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                        var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
+
+                        await _httpContextAccessor.HttpContext.SignInAsync(
+    "MyCookieAuth", // đúng scheme đã đăng ký
+    claimsPrincipal,
+    new AuthenticationProperties
+    {
+        IsPersistent = true,
+        ExpiresUtc = DateTimeOffset.UtcNow.AddHours(1)
+    });
+
+                    }
+
+                    return (true, role);
                 }
 
-                // Ghi log nếu token null hoặc rỗng
-                Console.WriteLine("Login failed: Token is null or empty");
-                return false;
+                return (false, null);
             }
             catch (ApiException ex)
             {
-                // Ghi log lỗi API
-                Console.WriteLine($"Login API Error: {ex.StatusCode} - {ex.Message}");
-                return false;
+                return (false, null);
             }
         }
 
@@ -66,18 +83,14 @@ namespace ECommerceSystem.GUI.Services
 
         public async Task<string> GetCurrentRoleAsync()
         {
-            var token = GetTokenFromCookie();
-            if (string.IsNullOrEmpty(token)) return null;
-
-            try
-            {
-                var response = await _authApi.GetCurrentRole();
-                return response.Role;
-            }
-            catch
+            var user = _httpContextAccessor.HttpContext?.User;
+            if (user == null || !user.Identity.IsAuthenticated)
             {
                 return null;
             }
+
+            var roleClaim = user.FindFirst(ClaimTypes.Role)?.Value;
+            return roleClaim ?? string.Empty;
         }
 
         public void Logout()

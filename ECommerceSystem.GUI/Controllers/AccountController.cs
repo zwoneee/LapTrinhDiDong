@@ -1,5 +1,6 @@
 ﻿using ECommerceSystem.GUI.Services;
 using ECommerceSystem.Shared.DTOs;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
@@ -50,9 +51,9 @@ namespace ECommerceSystem.GUI.Controllers
 
             try
             {
-                var success = await _authService.LoginAsync(model);
+                var (success, role) = await _authService.LoginAsync(model);
 
-                if (!success)
+                if (!success || string.IsNullOrEmpty(role))
                 {
                     _logger.LogWarning("Failed login attempt for username: {Username}", model.Username);
                     ViewBag.ErrorMessage = "Tên đăng nhập hoặc mật khẩu không đúng.";
@@ -60,8 +61,8 @@ namespace ECommerceSystem.GUI.Controllers
                 }
 
                 _logger.LogInformation("Successful login for username: {Username}", model.Username);
-                var role = await _authService.GetCurrentRoleAsync();
 
+                // Điều hướng theo vai trò
                 return role switch
                 {
                     "Admin" => RedirectToAction("Index", "Admin"),
@@ -79,10 +80,20 @@ namespace ECommerceSystem.GUI.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Logout()
+        public async Task<IActionResult> Logout()
         {
-            _authService.Logout();
-            _logger.LogInformation("User logged out successfully.");
+            try
+            {
+                await HttpContext.SignOutAsync("MyCookieAuth");
+                _authService.Logout(); // Xóa cookie token
+                _logger.LogInformation("User logged out successfully.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during logout process.");
+                return View("Error");
+            }
+
             return RedirectToAction("Index", "Home");
         }
     }
