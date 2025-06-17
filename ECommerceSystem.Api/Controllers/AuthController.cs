@@ -8,6 +8,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
+using ECommerceSystem.Shared.DTOs;
 
 namespace ECommerceSystem.Api.Controllers
 {
@@ -123,6 +124,13 @@ namespace ECommerceSystem.Api.Controllers
                 return StatusCode(500, new { error = ex.Message });
             }
         }
+        [HttpPost("refresh")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest model)
+        {
+            // Validate refreshToken → cấp lại accessToken mới
+            return Ok(new RefreshTokenResponse { AccessToken = "new...", RefreshToken = "new..." });
+        }
 
 
         [HttpGet("role")]
@@ -138,16 +146,5 @@ namespace ECommerceSystem.Api.Controllers
         }
     }
 
-    public class LoginModel
-    {
-        public string Username { get; set; }
-        public string Password { get; set; }
-    }
-
-    public class RegisterModel
-    {
-        public string Name { get; set; }
-        public string Email { get; set; }
-        public string Password { get; set; }
-    }
+    
 }
