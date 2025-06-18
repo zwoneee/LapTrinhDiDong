@@ -1,5 +1,5 @@
 ﻿using ECommerceSystem.GUI.Services;
-using ECommerceSystem.Shared.DTOs;
+using ECommerceSystem.Shared.DTOs.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;

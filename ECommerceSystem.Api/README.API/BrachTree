@@ -97,7 +97,7 @@ ECommerceSystem.sln
 │   ├── appsettings.json
 │   ├── Program.cs
 ├── ECommerceSystem.Shared (Class Library)
-│   ├── DTOs
+│   ├── DTOs ( dành để sử dụng gọi và trả kết quả về từ api )
 │   │   ├── ProductDTO.cs
 │   │   ├── OrderDTO.cs
 │   │   ├── OrderItemDTO.cs
@@ -107,7 +107,7 @@ ECommerceSystem.sln
 │   │   ├── UserDTO.cs
 │   │   ├── GuestSessionDTO.cs
 │   │   ├── SuggestionDTO.cs
-│   ├── Entities
+│   ├── Entities ( các thực thể trong database )
 │   │   ├── User.cs
 │   │   ├── Product.cs
 │   │   ├── Order.cs
@@ -117,10 +117,10 @@ ECommerceSystem.sln
 │   │   ├── Log.cs
 │   │   ├── UserLocation.cs
 │   │   ├── Promotion.cs
-│   ├── Constants
+│   ├── Constants 
 │   │   ├── OrderStatus.cs
 │   │   ├── Role.cs
-│   ├── Interfaces
+│   ├── Interfaces 
 │   │   ├── IProductRepository.cs
 │   │   ├── IOrderRepository.cs
 │   │   ├── IAnalyticsRepository.cs

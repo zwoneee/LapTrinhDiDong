@@ -1,4 +1,4 @@
-﻿namespace ECommerceSystem.Shared.DTOs
+﻿namespace ECommerceSystem.Shared.DTOs.Models
 {
     public class RegisterModel
     {

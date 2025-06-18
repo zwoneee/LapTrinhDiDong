@@ -1,4 +1,4 @@
-﻿namespace ECommerceSystem.Shared.DTOs
+﻿namespace ECommerceSystem.Shared.DTOs.User
 {
     public class RoleResponse
     {

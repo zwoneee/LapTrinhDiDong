@@ -1,5 +1,5 @@
 ﻿using ECommerceSystem.Api.Data;
-using ECommerceSystem.Shared.DTOs;
+using ECommerceSystem.Shared.DTOs.User;
 using ECommerceSystem.Shared.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;

@@ -1,4 +1,5 @@
-﻿using ECommerceSystem.Shared.DTOs;
+﻿using ECommerceSystem.Shared.DTOs.Models;
+using ECommerceSystem.Shared.DTOs.User;
 using Refit;
 using System.Threading.Tasks;
 

@@ -1,5 +1,5 @@
 ﻿using ECommerceSystem.Api.Data.Mongo;
-using ECommerceSystem.Shared.DTOs;
+using ECommerceSystem.Shared.DTOs.User;
 using MongoDB.Driver;
 
 namespace ECommerceSystem.Api.Services

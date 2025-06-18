@@ -1,5 +1,6 @@
 ﻿using ECommerceSystem.GUI.Apis;
-using ECommerceSystem.Shared.DTOs;
+using ECommerceSystem.Shared.DTOs.Models;
+using ECommerceSystem.Shared.DTOs.User;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;

@@ -9,6 +9,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using ECommerceSystem.Shared.DTOs;
+using ECommerceSystem.Shared.DTOs.Models;
+using ECommerceSystem.Shared.DTOs.User;
 
 namespace ECommerceSystem.Api.Controllers
 {

@@ -1,6 +1,7 @@
 ﻿using ECommerceSystem.Api.Data;
 using ECommerceSystem.Api.Data.Mongo;
 using ECommerceSystem.Shared.DTOs;
+using ECommerceSystem.Shared.DTOs.Product;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
