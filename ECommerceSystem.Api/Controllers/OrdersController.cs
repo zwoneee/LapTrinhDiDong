@@ -66,7 +66,7 @@ namespace ECommerceSystem.Api.Controllers
                 Total = order.Total,
                 Status = order.Status,
                 DeliveryLocation = order.DeliveryLocation,
-                QrCode = order.QrCode,
+                //QrCode = order.QrCode,
                 Items = order.OrderItems.Select(i => new OrderItemDTO
                 {
                     ProductId = i.ProductId,
