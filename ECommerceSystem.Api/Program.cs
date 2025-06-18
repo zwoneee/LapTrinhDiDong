@@ -12,6 +12,7 @@ using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
 using System.Text;
 using Role = ECommerceSystem.Shared.Entities.Role;
+using Microsoft.Extensions.Caching.StackExchangeRedis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -83,6 +84,11 @@ builder.Services.AddAuthentication("Bearer")
 // 💉 DI Repositories / Services
 builder.Services.AddScoped<DataSyncService>();
 builder.Services.AddScoped<UserRepository>(); // cần cho AuthController
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration.GetSection("Redis:ConnectionString").Value;
+});
+
 // Cấu hình CORS để cho phép MVC gọi API
 builder.Services.AddCors(options =>
 {

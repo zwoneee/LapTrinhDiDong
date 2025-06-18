@@ -16,9 +16,9 @@ namespace ECommerceSystem.Api.Hubs
             return base.OnDisconnectedAsync(exception);
         }
 
-        //public async Task SendOrderUpdate(int orderId, string status)
-        //{
-        //    await Clients.All.SendAsync("ReceiveOrderUpdate", orderId, status);
-        //}
+        public async Task SendOrderUpdate(int orderId, string status)
+        {
+            await Clients.All.ReceiveOrderUpdate(orderId, status);
+        }
     }
 }
