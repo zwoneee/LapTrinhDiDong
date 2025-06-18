@@ -13,6 +13,8 @@ using StackExchange.Redis;
 using System.Text;
 using Role = ECommerceSystem.Shared.Entities.Role;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -62,6 +64,14 @@ builder.Services.AddInMemoryRateLimiting();
 builder.Services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
 builder.Services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
 builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
+builder.Services.AddControllers(options =>
+{
+    var policy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+    options.Filters.Add(new AuthorizeFilter(policy));
+});
+
 
 // 🔑 Authentication - JWT Bearer
 builder.Services.AddAuthentication("Bearer")
@@ -100,6 +110,12 @@ builder.Services.AddCors(options =>
                .AllowCredentials();
     });
 });
+
+// Mongo
+var mongoConfig = builder.Configuration.GetSection("MongoDbSettings").Get<MongoDbSettings>();
+builder.Services.AddSingleton(sp =>
+    new MongoDbContext(mongoConfig.ConnectionString, mongoConfig.DatabaseName));
+
 // 🚀 Build app
 var app = builder.Build();
 
@@ -123,6 +139,7 @@ using (var scope = app.Services.CreateScope())
         logger.LogError(ex, "Có lỗi xảy ra khi khởi tạo vai trò trong cơ sở dữ liệu.");
     }
 }
+
 // 🛡️ Middlewares
 app.UseHttpsRedirection();
 app.UseCors("AllowMvcApp");

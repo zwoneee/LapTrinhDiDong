@@ -8,6 +8,7 @@ using ECommerceSystem.Shared.DTOs.Product;
 using Microsoft.Extensions.Caching.Distributed;
 using System;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ECommerceSystem.Api.Controllers
 {
