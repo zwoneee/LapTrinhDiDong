@@ -9,7 +9,7 @@ namespace ECommerceSystem.Api.Services
 {
     public class DataSyncService
     {
-        private readonly WebDBContext _dbContext; // Sửa từ WebDBContext thành AppDbContext
+        private readonly WebDBContext _dbContext; 
         private readonly MongoDbContext _mongoContext;
 
         public DataSyncService(WebDBContext dbContext, MongoDbContext mongoContext)

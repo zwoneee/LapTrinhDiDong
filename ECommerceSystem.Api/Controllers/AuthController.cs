@@ -88,23 +88,23 @@ namespace ECommerceSystem.Api.Controllers
                 return BadRequest(new { error = "Email đã được sử dụng." });
             }
 
-            // Tìm role 'Customer'
-            var role = await _userRepository.GetRoleByName("Customer");
+            // Tìm role 'User'
+            var role = await _userRepository.GetRoleByName("User");
             if (role == null)
             {
-                return StatusCode(500, new { error = "Role mặc định không tồn tại. Vui lòng tạo role 'Customer' trong DB." });
+                return StatusCode(500, new { error = "Role mặc định không tồn tại. Vui lòng tạo role 'User' trong DB." });
             }
 
             // Khởi tạo user
             var user = new User
             {
-                UserName = model.Email,
+                UserName = model.UserName,
                 Name = model.Name,
                 Email = model.Email,
                 RoleId = role.Id,
                 CreatedAt = DateTime.UtcNow,
                 IsDeleted = false,
-                 DeviceToken = "" // ✅ Fix lỗi NULL ở đây
+                DeviceToken = ""
             };
 
             try
@@ -116,8 +116,8 @@ namespace ECommerceSystem.Api.Controllers
                     return StatusCode(500, new { error = "Không thể tạo người dùng.", details = result.Errors });
                 }
 
-                // Gán vào vai trò 'Customer'
-                await _userManager.AddToRoleAsync(user, "Customer");
+                // Gán vào vai trò 'User'
+                await _userManager.AddToRoleAsync(user, "User");
 
                 return Ok(new { message = "Đăng ký thành công." });
             }
@@ -126,6 +126,7 @@ namespace ECommerceSystem.Api.Controllers
                 return StatusCode(500, new { error = ex.Message });
             }
         }
+
         [HttpPost("refresh")]
         [AllowAnonymous]
         public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest model)
@@ -135,16 +136,33 @@ namespace ECommerceSystem.Api.Controllers
         }
 
 
-        [HttpGet("role")]
-        [Authorize]
-        public IActionResult GetCurrentRole()
+        [HttpPost("role")]
+        //[Authorize]
+        public async Task<IActionResult> GetUserRole()
         {
-            var role = User.FindFirst(ClaimTypes.Role)?.Value;
-            if (string.IsNullOrEmpty(role))
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
             {
-                return BadRequest(new { error = "Không tìm thấy vai trò của người dùng." });
+                Console.WriteLine("Không tìm thấy userId trong token");
+                return Unauthorized(new { message = "Không tìm thấy ID người dùng trong mã thông báo" });
             }
-            return Ok(new { Role = role });
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                Console.WriteLine($"Không tìm thấy người dùng với ID: {userId}");
+                return NotFound(new { message = "Không tìm thấy người dùng" });
+            }
+
+            var roles = await _userManager.GetRolesAsync(user);
+            if (roles == null || !roles.Any())
+            {
+                Console.WriteLine($"Không tìm thấy vai trò cho người dùng ID: {userId}");
+                return NotFound(new { message = "Không có vai trò nào được gán cho người dùng" });
+            }
+
+            Console.WriteLine($"Vai trò tìm thấy: {roles.First()}");
+            return Ok(new { role = roles.First() });
         }
     }
 
