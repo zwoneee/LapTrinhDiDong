@@ -37,20 +37,22 @@ public static class RoleInitializer
         }
 
         // Tạo tài khoản Admin nếu chưa tồn tại
+        var adminUserName = "admin";
         var adminEmail = "admin@gmail.com";
-        var adminUser = await userManager.FindByEmailAsync(adminEmail);
+        var adminUser = await userManager.FindByNameAsync(adminUserName); // ✅ kiểm tra theo UserName
+
         if (adminUser == null)
         {
             adminUser = new User
             {
-                UserName = "admin",
+                UserName = adminUserName,
                 Name = "adminUser",
                 Email = adminEmail,
                 EmailConfirmed = true,
                 DeviceToken = "default-token",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
-                RoleId = adminRole.Id // Gán RoleId hợp lệ
+                RoleId = adminRole.Id
             };
 
             var result = await userManager.CreateAsync(adminUser, "Admin@123");
@@ -63,5 +65,14 @@ public static class RoleInitializer
                 throw new Exception($"Failed to create admin user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
             }
         }
+        else
+        {
+            // (Tùy chọn) đảm bảo đã gán role nếu thiếu
+            if (!await userManager.IsInRoleAsync(adminUser, "Admin"))
+            {
+                await userManager.AddToRoleAsync(adminUser, "Admin");
+            }
+        }
+
     }
 }

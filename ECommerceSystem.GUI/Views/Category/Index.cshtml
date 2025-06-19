@@ -1,0 +1,49 @@
+﻿@model List<ECommerceSystem.Shared.DTOs.Category.CategoryDTO>
+@{
+    ViewData["Title"] = "Danh sách danh mục";
+}
+<h2>@ViewData["Title"]</h2>
+<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+<div class="mb-3">
+    <a href="@Url.Action("CreateOrUpdate", "Category")" class="btn btn-primary">Thêm mới</a>
+</div>
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Tên</th>
+            <th>Mô tả</th>
+            <th>Thao tác</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.Id</td>
+                <td>@item.Name</td>
+                <td>@item.Description</td>
+                <td>
+                    <a href="@Url.Action("CreateOrUpdate", "Category", new { id = item.Id })" class="btn btn-warning btn-sm">Sửa</a>
+                    <button class="btn btn-danger btn-sm" onclick="confirmDelete(@item.Id)">Xóa</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+<script>
+    function confirmDelete(id) {
+        if (confirm('Bạn có chắc muốn xóa danh mục này?')) {
+            const form = document.createElement('form');
+            form.method = 'post';
+            form.action = '@Url.Action("Delete", "Category")';
+            form.innerHTML = `<input type="hidden" name="id" value="${id}" />@Html.AntiForgeryToken()`;
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+</script>

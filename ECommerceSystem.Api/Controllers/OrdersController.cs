@@ -14,7 +14,7 @@ namespace ECommerceSystem.Api.Controllers
 {
     [Route("api/user/orders")]
     [ApiController]
-    [Authorize]
+   // [Authorize]
     public class OrdersController : ControllerBase
     {
         private readonly WebDBContext _dbContext;

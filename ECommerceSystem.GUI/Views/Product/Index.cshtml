@@ -1,0 +1,73 @@
+﻿@model ECommerceSystem.Shared.DTOs.Product.ProductListResponse
+@{
+    ViewData["Title"] = "Danh sách sản phẩm";
+}
+<h2>@ViewData["Title"]</h2>
+<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+<form asp-action="Index" method="get" class="mb-3">
+    <div class="row">
+        <div class="col-md-3">
+            <input type="text" name="search" value="@ViewBag.Search" placeholder="Tìm kiếm..." class="form-control" />
+        </div>
+        <div class="col-md-3">
+            <select name="categoryId" class="form-control">
+                <option value="">Tất cả danh mục</option>
+                @foreach (var category in ViewBag.Categories)
+                {
+                    <option value="@category.Id" selected="@(category.Id == ViewBag.CategoryId ? "selected" : "")">@category.Name</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <input type="number" name="minPrice" value="@ViewBag.MinPrice" placeholder="Giá từ" class="form-control" step="0.01" />
+        </div>
+        <div class="col-md-2">
+            <input type="number" name="maxPrice" value="@ViewBag.MaxPrice" placeholder="Giá đến" class="form-control" step="0.01" />
+        </div>
+        <div class="col-md-2">
+            <input type="checkbox" name="promotion" value="true" @(ViewBag.Promotion ? "checked" : "") /> Khuyến mãi
+        </div>
+    </div>
+    <div class="row mt-2">
+        <div class="col-md-3">
+            <select name="sortBy" class="form-control">
+                <option value="">Sắp xếp mặc định</option>
+                <option value="priceAsc" selected="@(ViewBag.SortBy == "priceAsc" ? "selected" : "")">Giá tăng</option>
+                <option value="priceDesc" selected="@(ViewBag.SortBy == "priceDesc" ? "selected" : "")">Giá giảm</option>
+                <option value="rating" selected="@(ViewBag.SortBy == "rating" ? "selected" : "")">Đánh giá</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <button type="submit" class="btn btn-primary">Lọc</button>
+        </div>
+    </div>
+</form>
+<div class="row">
+    @foreach (var product in Model.Products)
+    {
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <img src="@product.ThumbnailUrl" class="card-img-top" alt="@product.Name" style="height: 200px; object-fit: cover;" />
+                <div class="card-body">
+                    <h5 class="card-title">@product.Name</h5>
+                    <p class="card-text">Giá: @product.Price VNĐ</p>
+                    <p class="card-text">Đánh giá: @product.Rating</p>
+                    @if (product.IsPromoted)
+                    {
+                        <span class="badge badge-success">Khuyến mãi</span>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+<nav>
+    <ul class="pagination">
+        @for (var i = 1; i <= Math.Ceiling((double)Model.Total / Model.PageSize); i++)
+        {
+            <li class="page-item @(i == Model.Page ? "active" : "")">
+                <a class="page-link" href="?page=@i&search=@ViewBag.Search&categoryId=@ViewBag.CategoryId&minPrice=@ViewBag.MinPrice&maxPrice=@ViewBag.MaxPrice&promotion=@ViewBag.Promotion&sortBy=@ViewBag.SortBy">@i</a>
+            </li>
+        }
+    </ul>
+</nav>

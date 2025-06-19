@@ -85,6 +85,21 @@ static void ConfigureRefit(IServiceCollection services)
         .AddHttpMessageHandler<AuthRetryHandler>()
         .ConfigureHttpClient(SetHttpClient);
 
+    services.AddRefitClient<IOrderApi>()
+       .AddHttpMessageHandler<AuthRetryHandler>()
+       .ConfigureHttpClient(SetHttpClient); 
+
+    services.AddRefitClient<ICategoryApi>()
+        .AddHttpMessageHandler<AuthRetryHandler>()
+        .ConfigureHttpClient(SetHttpClient);
+
+    services.AddRefitClient<IProductApi>()
+       .AddHttpMessageHandler<AuthRetryHandler>()
+       .ConfigureHttpClient(SetHttpClient);
+
+    //services.AddRefitClient<IAuthApi>()
+    //   .AddHttpMessageHandler<AuthRetryHandler>()
+    //   .ConfigureHttpClient(SetHttpClient);
     void SetHttpClient(HttpClient httpClient)
     {
         httpClient.BaseAddress = new Uri(AppConstants.ApiBaseUrl);
