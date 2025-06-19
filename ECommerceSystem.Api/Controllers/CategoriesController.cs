@@ -35,7 +35,7 @@ namespace ECommerceSystem.Api.Controllers
             return Ok(categories);
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("get/{id}")]
         public async Task<IActionResult> GetCategory(int id)
         {
             var category = await _dbContext.Categories
@@ -54,9 +54,15 @@ namespace ECommerceSystem.Api.Controllers
             return Ok(category);
         }
 
-        [HttpPost]
+        [HttpPost("Create")]
         public async Task<IActionResult> CreateCategory([FromBody] CategoryDTO dto)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            if (dto == null)
+                return BadRequest("CategoryDTO is null");
+
             var category = new Category
             {
                 Name = dto.Name,
@@ -69,7 +75,7 @@ namespace ECommerceSystem.Api.Controllers
             return CreatedAtAction(nameof(GetCategory), new { id = category.Id }, dto);
         }
 
-        [HttpPut("{id}")]
+        [HttpPut("edit/{id}")]
         public async Task<IActionResult> UpdateCategory(int id, [FromBody] CategoryDTO dto)
         {
             var category = await _dbContext.Categories.FindAsync(id);
@@ -83,7 +89,7 @@ namespace ECommerceSystem.Api.Controllers
             return NoContent();
         }
 
-        [HttpDelete("{id}")]
+        [HttpDelete("delete/{id}")]
         public async Task<IActionResult> DeleteCategory(int id)
         {
             var category = await _dbContext.Categories.FindAsync(id);

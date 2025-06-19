@@ -15,6 +15,9 @@ using Role = ECommerceSystem.Shared.Entities.Role;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
+using ECommerceSystem.Shared.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
 

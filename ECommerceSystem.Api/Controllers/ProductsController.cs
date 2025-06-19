@@ -100,5 +100,80 @@ namespace ECommerceSystem.Api.Controllers
 
             return Ok(result);
         }
+        // Thêm sản phẩm mới
+        [HttpPost]
+        //[Authorize(Roles = "Admin")]
+        public async Task<IActionResult> AddProduct([FromBody] ProductDTO model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var product = new Product
+            {
+                Name = model.Name,
+                Price = model.Price,
+                Description = model.Description,
+                ThumbnailUrl = model.ThumbnailUrl,
+                CategoryId = model.CategoryId,
+                Stock = model.Stock,
+                Rating = model.Rating,
+                IsPromoted = model.IsPromoted,
+                QrCode = model.QrCode,
+                CreatedAt = DateTime.UtcNow,
+                IsDeleted = false,
+                Slug = model.Slug
+            };
+
+            _dbContext.Products.Add(product);
+            await _dbContext.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetProducts), new { id = product.Id }, product);
+        }
+
+        // Sửa sản phẩm
+        [HttpPut("{id}")]
+        //[Authorize(Roles = "Admin")]
+        public async Task<IActionResult> EditProduct(int id, [FromBody] ProductDTO model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var product = await _dbContext.Products.FindAsync(id);
+            if (product == null || product.IsDeleted)
+                return NotFound();
+
+            product.Name = model.Name;
+            product.Price = model.Price;
+            product.Description = model.Description;
+            product.ThumbnailUrl = model.ThumbnailUrl;
+            product.CategoryId = model.CategoryId;
+            product.Stock = model.Stock;
+            product.Rating = model.Rating;
+            product.IsPromoted = model.IsPromoted;
+            product.QrCode = model.QrCode;
+            product.UpdatedAt = DateTime.UtcNow;
+            product.Slug = model.Slug;
+
+            await _dbContext.SaveChangesAsync();
+
+            return Ok(product);
+        }
+
+        // Xóa sản phẩm (mềm)
+        [HttpDelete("{id}")]
+        //[Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeleteProduct(int id)
+        {
+            var product = await _dbContext.Products.FindAsync(id);
+            if (product == null || product.IsDeleted)
+                return NotFound();
+
+            product.IsDeleted = true;
+            product.UpdatedAt = DateTime.UtcNow;
+            await _dbContext.SaveChangesAsync();
+
+            return NoContent();
+        }
+
     }
 }
