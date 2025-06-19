@@ -16,7 +16,6 @@ namespace ECommerceSystem.Api.Controllers
 {
     [Route("api/auth")]
     [ApiController]
-    [Authorize]
     public class AuthController : ControllerBase
     {
         private readonly UserRepository _userRepository;
@@ -137,16 +136,33 @@ namespace ECommerceSystem.Api.Controllers
         }
 
 
-        [HttpGet("role")]
-        [Authorize]
-        public IActionResult GetCurrentRole()
+        [HttpPost("role")]
+        //[Authorize]
+        public async Task<IActionResult> GetUserRole()
         {
-            var role = User.FindFirst(ClaimTypes.Role)?.Value;
-            if (string.IsNullOrEmpty(role))
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
             {
-                return BadRequest(new { error = "Không tìm thấy vai trò của người dùng." });
+                Console.WriteLine("Không tìm thấy userId trong token");
+                return Unauthorized(new { message = "Không tìm thấy ID người dùng trong mã thông báo" });
             }
-            return Ok(new { Role = role });
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                Console.WriteLine($"Không tìm thấy người dùng với ID: {userId}");
+                return NotFound(new { message = "Không tìm thấy người dùng" });
+            }
+
+            var roles = await _userManager.GetRolesAsync(user);
+            if (roles == null || !roles.Any())
+            {
+                Console.WriteLine($"Không tìm thấy vai trò cho người dùng ID: {userId}");
+                return NotFound(new { message = "Không có vai trò nào được gán cho người dùng" });
+            }
+
+            Console.WriteLine($"Vai trò tìm thấy: {roles.First()}");
+            return Ok(new { role = roles.First() });
         }
     }
 

@@ -18,12 +18,45 @@ using Microsoft.AspNetCore.Mvc.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 🔧 1. Add services to the container
-builder.Services.AddControllers();
-
 // 🔍 Swagger
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "ECommerceSystem.Api",
+        Version = "v1"
+    });
+
+    // ✅ Cấu hình bảo mật với JWT Bearer
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Description = "Nhập JWT token theo định dạng: Bearer {token}",
+        Name = "Authorization",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                },
+                Scheme = "oauth2",
+                Name = "Bearer",
+                In = Microsoft.OpenApi.Models.ParameterLocation.Header
+            },
+            new List<string>()
+        }
+    });
+});
+
 
 // 💾 SQL Server & EF Core
 builder.Services.AddDbContext<WebDBContext>(options =>
@@ -64,13 +97,17 @@ builder.Services.AddInMemoryRateLimiting();
 builder.Services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
 builder.Services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
 builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
-builder.Services.AddControllers(options =>
-{
-    var policy = new AuthorizationPolicyBuilder()
-        .RequireAuthenticatedUser()
-        .Build();
-    options.Filters.Add(new AuthorizeFilter(policy));
-});
+
+
+builder.Services.AddControllers();
+
+//builder.Services.AddControllers(options =>
+//{
+//    var policy = new AuthorizationPolicyBuilder()
+//        .RequireAuthenticatedUser()
+//        .Build();
+//    options.Filters.Add(new AuthorizeFilter(policy));
+//});
 
 
 // 🔑 Authentication - JWT Bearer
