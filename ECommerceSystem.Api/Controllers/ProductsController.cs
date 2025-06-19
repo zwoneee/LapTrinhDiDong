@@ -168,12 +168,10 @@ namespace ECommerceSystem.Api.Controllers
             if (product == null || product.IsDeleted)
                 return NotFound();
 
-            product.IsDeleted = true;
-            product.UpdatedAt = DateTime.UtcNow;
+            _dbContext.Products.Remove(product);
             await _dbContext.SaveChangesAsync();
 
             return NoContent();
         }
-
     }
 }
