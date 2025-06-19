@@ -12,10 +12,18 @@
         <div class="col-md-3">
             <select name="categoryId" class="form-control">
                 <option value="">Tất cả danh mục</option>
-                @foreach (var category in ViewBag.Categories)
+                @if (ViewBag.Categories != null)
                 {
-                    <option value="@category.Id" selected="@(category.Id == ViewBag.CategoryId ? "selected" : "")">@category.Name</option>
+                    foreach (var category in ViewBag.Categories)
+                    {
+                        <option value="@category.Id">@category.Name</option>
+                    }
                 }
+                else
+                {
+                    <option>Không có danh mục</option>
+                }
+
             </select>
         </div>
         <div class="col-md-2">
@@ -24,9 +32,8 @@
         <div class="col-md-2">
             <input type="number" name="maxPrice" value="@ViewBag.MaxPrice" placeholder="Giá đến" class="form-control" step="0.01" />
         </div>
-        <div class="col-md-2">
-            <input type="checkbox" name="promotion" value="true" @(ViewBag.Promotion ? "checked" : "") /> Khuyến mãi
-        </div>
+        <input type="checkbox" name="promotion" value="true" @(Convert.ToBoolean(ViewBag.Promotion ?? false) ? "checked" : "") /> Khuyến mãi
+
     </div>
     <div class="row mt-2">
         <div class="col-md-3">
