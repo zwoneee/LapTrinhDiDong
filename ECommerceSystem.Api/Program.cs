@@ -41,12 +41,10 @@ builder.Services.AddIdentity<User, Role>(options =>
 .AddDefaultTokenProviders();
 
 // 📦 MongoDB
-builder.Services.AddSingleton(sp =>
-{
-    var mongoConn = builder.Configuration["Mongo:ConnectionString"];
-    var dbName = builder.Configuration["Mongo:DatabaseName"];
-    return new MongoDbContext(mongoConn, dbName);
-});
+var mongoConn = builder.Configuration["MongoDbSettings:ConnectionString"];
+var dbName = builder.Configuration["MongoDbSettings:DatabaseName"];
+builder.Services.AddSingleton(sp => new MongoDbContext(mongoConn, dbName));
+
 
 // 🧠 Redis
 builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
