@@ -15,8 +15,7 @@ using Role = ECommerceSystem.Shared.Entities.Role;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.DependencyInjection;
+//using Microsoft.Extensions.DependencyInjection;
 using ECommerceSystem.Shared.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -67,16 +66,18 @@ builder.Services.AddDbContext<WebDBContext>(options =>
 
 // 🔐 Identity (dành cho quản lý người dùng và vai trò nếu dùng thêm)
 // Configure Identity
-builder.Services.AddIdentity<User, Role>(options =>
-{
-    options.Password.RequireDigit = true;
-    options.Password.RequireLowercase = true;
-    options.Password.RequireUppercase = true;
-    options.Password.RequireNonAlphanumeric = true;
-    options.Password.RequiredLength = 6;
-})
-.AddEntityFrameworkStores<WebDBContext>()
-.AddDefaultTokenProviders();
+//builder.Services.AddIdentity<User, Role>(options =>
+//{
+//    options.Password.RequireDigit = true;
+//    options.Password.RequireLowercase = true;
+//    options.Password.RequireUppercase = true;
+//    options.Password.RequireNonAlphanumeric = true;
+//    options.Password.RequiredLength = 6;
+//})
+//.AddEntityFrameworkStores<WebDBContext>()
+//.AddDefaultTokenProviders();
+
+
 
 // 📦 MongoDB
 var mongoConn = builder.Configuration["MongoDbSettings:ConnectionString"];
@@ -112,9 +113,8 @@ builder.Services.AddControllers();
 
 
 // 🔑 Authentication - JWT Bearer
-builder.Services.AddAuthentication("Bearer")
-    .AddJwtBearer("Bearer", options =>
-    {
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options => {
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -126,6 +126,7 @@ builder.Services.AddAuthentication("Bearer")
             )
         };
     });
+
 
 // 🧩 Authorization (role-based đã tích hợp sẵn trong [Authorize(Roles = "...")])
 
@@ -163,18 +164,20 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-// Khởi tạo vai trò
+
+// Khởi tạo dữ liệu mặc định
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     try
     {
         await RoleInitializer.InitializeAsync(services);
+        await AdminInitializer.SeedAdminAsync(services);
     }
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "Có lỗi xảy ra khi khởi tạo vai trò trong cơ sở dữ liệu.");
+        logger.LogError(ex, "Lỗi khi khởi tạo dữ liệu mặc định.");
     }
 }
 

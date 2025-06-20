@@ -10,7 +10,7 @@ namespace ECommerceSystem.Api.Controllers
 {
     [Route("api/public/categories")]
     [ApiController]
-    //[Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin")]
     public class CategoriesController : ControllerBase
     {
         private readonly WebDBContext _dbContext;

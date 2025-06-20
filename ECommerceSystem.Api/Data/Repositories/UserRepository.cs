@@ -1,7 +1,6 @@
 ﻿using ECommerceSystem.Api.Data;
 using ECommerceSystem.Shared.DTOs.User;
 using ECommerceSystem.Shared.Entities;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
 
@@ -10,20 +9,16 @@ namespace ECommerceSystem.Api.Data.Repositories
     public class UserRepository
     {
         private readonly WebDBContext _dbContext;
-        private readonly UserManager<User> _userManager;
-        private readonly RoleManager<Role> _roleManager;
 
-        public UserRepository(WebDBContext dbContext, UserManager<User> userManager, RoleManager<Role> roleManager)
+        public UserRepository(WebDBContext dbContext)
         {
             _dbContext = dbContext;
-            _userManager = userManager;
-            _roleManager = roleManager;
         }
 
         public async Task<UserDTO> GetUserInfo(string username)
         {
-            var user = await _userManager.FindByNameAsync(username);
-            if (user == null || user.IsDeleted) return null;
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.UserName == username && !u.IsDeleted);
+            if (user == null) return null;
 
             return new UserDTO
             {
@@ -37,11 +32,11 @@ namespace ECommerceSystem.Api.Data.Repositories
 
         public async Task<(UserDTO User, string Role)> GetUserInfoAndRole(string username)
         {
-            var user = await _userManager.FindByNameAsync(username);
-            if (user == null || user.IsDeleted) return (null, null);
+            var user = await _dbContext.Users
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.UserName == username && !u.IsDeleted);
 
-            var roles = await _userManager.GetRolesAsync(user);
-            var role = roles.FirstOrDefault();
+            if (user == null) return (null, null);
 
             return (new UserDTO
             {
@@ -50,36 +45,47 @@ namespace ECommerceSystem.Api.Data.Repositories
                 Email = user.Email,
                 DeviceToken = user.DeviceToken,
                 IsDeleted = user.IsDeleted
-            }, role);
+            }, user.Role?.Name);
         }
 
         public async Task<User> GetUserPasswordHash(string username)
         {
-            var user = await _userManager.FindByNameAsync(username);
-            return user != null && !user.IsDeleted ? user : null;
+            return await _dbContext.Users.FirstOrDefaultAsync(u => u.UserName == username && !u.IsDeleted);
         }
 
         public async Task<Role> GetRoleByName(string roleName)
         {
-            return await _roleManager.FindByNameAsync(roleName);
+            return await _dbContext.Roles.FirstOrDefaultAsync(r => r.Name == roleName);
         }
 
-        public async Task CreateUserAsync(User user, string password)
+        public async Task CreateRoleAsync(Role role)
         {
-            var result = await _userManager.CreateAsync(user, password);
-            if (!result.Succeeded)
-            {
-                throw new Exception(string.Join(", ", result.Errors.Select(e => e.Description)));
-            }
+            await _dbContext.Roles.AddAsync(role);
+            await _dbContext.SaveChangesAsync();
+        }
+
+        public async Task CreateUserAsync(User user, string passwordHash)
+        {
+            user.PasswordHash = passwordHash; // đã mã hóa ở nơi khác, ví dụ bằng BCrypt.Net
+            await _dbContext.Users.AddAsync(user);
+            await _dbContext.SaveChangesAsync();
         }
 
         public async Task AddUserToRoleAsync(User user, string roleName)
         {
-            var result = await _userManager.AddToRoleAsync(user, roleName);
-            if (!result.Succeeded)
+            var role = await GetRoleByName(roleName);
+            if (role == null)
             {
-                throw new Exception(string.Join(", ", result.Errors.Select(e => e.Description)));
+                throw new Exception($"Vai trò '{roleName}' không tồn tại.");
             }
+
+            user.RoleId = role.Id;
+            await _dbContext.SaveChangesAsync();
+        }
+
+        public async Task<User> GetUserPasswordHashById(int id)
+        {
+            return await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted);
         }
     }
 }
