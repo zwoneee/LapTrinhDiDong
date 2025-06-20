@@ -7,7 +7,6 @@ using ECommerceSystem.Api.Services;
 using ECommerceSystem.Api.SwaggerConfig;
 using ECommerceSystem.Shared.Entities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
