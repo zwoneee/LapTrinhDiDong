@@ -68,6 +68,7 @@
             </div>
         </nav>
     </header>
+
     <div class="container">
         <main role="main" class="pb-3">
             <div id="loading" class="d-none text-center">
@@ -78,9 +79,11 @@
             @RenderBody()
         </main>
     </div>
+
     <footer class="border-top footer text-muted bg-light">
         <div class="container text-center">
-            © 2025 - ECommerceSystem - <a asp-controller="Home" asp-action="Privacy">Chính sách bảo mật</a>
+            © 2025 - ECommerceSystem -
+            <a asp-controller="Home" asp-action="Privacy">Chính sách bảo mật</a>
             <div class="mt-2">
                 <a href="#" class="text-muted mx-2">Facebook</a> |
                 <a href="#" class="text-muted mx-2">Twitter</a> |
@@ -88,18 +91,14 @@
             </div>
         </div>
     </footer>
-    <script src="~/lib/jquery/dist/jquery.min.js" defer></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js" defer></script>
-    <script src="~/js/site.js" asp-append-version="true" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.validate/1.19.3/jquery.validate.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.validate.unobtrusive/3.2.12/jquery.validate.unobtrusive.min.js" defer></script>
-    <script>
-        $(document).ajaxStart(function () { $("#loading").removeClass("d-none"); });
-        $(document).ajaxComplete(function () { $("#loading").addClass("d-none"); });
-        $(document).ready(function () {
-            $("form").submit(function () { $("#loading").removeClass("d-none"); });
-        });
-    </script>
+
+    <!-- Script load đúng thứ tự -->
+    <script src="~/lib/jquery/dist/jquery.min.js" asp-append-version="true"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js" asp-append-version="true"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.3/jquery.validate.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate-unobtrusive/3.2.12/jquery.validate.unobtrusive.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

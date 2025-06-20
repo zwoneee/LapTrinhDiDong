@@ -9,15 +9,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using StackExchange.Redis;
 using System.Text;
-using Role = ECommerceSystem.Shared.Entities.Role;
-using Microsoft.Extensions.Caching.StackExchangeRedis;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc.Authorization;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.DependencyInjection;
-using ECommerceSystem.Shared.Entities;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,48 +18,46 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    c.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "ECommerceSystem.Api",
         Version = "v1"
     });
 
-    // ✅ Cấu hình bảo mật với JWT Bearer
-    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    // ✅ JWT Bearer Security
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "Nhập JWT token theo định dạng: Bearer {token}",
         Name = "Authorization",
-        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
         Scheme = "Bearer"
     });
 
-    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            new OpenApiSecurityScheme
             {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                Reference = new OpenApiReference
                 {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Type = ReferenceType.SecurityScheme,
                     Id = "Bearer"
                 },
                 Scheme = "oauth2",
                 Name = "Bearer",
-                In = Microsoft.OpenApi.Models.ParameterLocation.Header
+                In = ParameterLocation.Header
             },
             new List<string>()
         }
     });
 });
 
-
 // 💾 SQL Server & EF Core
 builder.Services.AddDbContext<WebDBContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// 🔐 Identity (dành cho quản lý người dùng và vai trò nếu dùng thêm)
-// Configure Identity
+// 🔐 Identity
 builder.Services.AddIdentity<User, Role>(options =>
 {
     options.Password.RequireDigit = true;
@@ -79,39 +70,25 @@ builder.Services.AddIdentity<User, Role>(options =>
 .AddDefaultTokenProviders();
 
 // 📦 MongoDB
-var mongoConn = builder.Configuration["MongoDbSettings:ConnectionString"];
-var dbName = builder.Configuration["MongoDbSettings:DatabaseName"];
-builder.Services.AddSingleton(sp => new MongoDbContext(mongoConn, dbName));
-
-
-// 🧠 Redis
-builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
-    ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis")));
+var mongoConfig = builder.Configuration.GetSection("MongoDbSettings").Get<MongoDbSettings>();
+builder.Services.AddSingleton(sp =>
+    new MongoDbContext(mongoConfig.ConnectionString, mongoConfig.DatabaseName));
 
 // 🔔 SignalR
 builder.Services.AddSignalR();
 
-// 🚫 Rate Limiting
+// 🚫 Rate Limiting (In-Memory)
 builder.Services.AddMemoryCache();
-builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
 builder.Services.AddInMemoryRateLimiting();
+builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
 builder.Services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
 builder.Services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
 builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 
+// Caching fallback (optional)
+builder.Services.AddDistributedMemoryCache(); // nếu bạn sử dụng IDistributedCache
 
-builder.Services.AddControllers();
-
-//builder.Services.AddControllers(options =>
-//{
-//    var policy = new AuthorizationPolicyBuilder()
-//        .RequireAuthenticatedUser()
-//        .Build();
-//    options.Filters.Add(new AuthorizeFilter(policy));
-//});
-
-
-// 🔑 Authentication - JWT Bearer
+// 🔑 JWT Authentication
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer("Bearer", options =>
     {
@@ -127,32 +104,23 @@ builder.Services.AddAuthentication("Bearer")
         };
     });
 
-// 🧩 Authorization (role-based đã tích hợp sẵn trong [Authorize(Roles = "...")])
-
 // 💉 DI Repositories / Services
 builder.Services.AddScoped<DataSyncService>();
-builder.Services.AddScoped<UserRepository>(); // cần cho AuthController
-builder.Services.AddStackExchangeRedisCache(options =>
-{
-    options.Configuration = builder.Configuration.GetSection("Redis:ConnectionString").Value;
-});
+builder.Services.AddScoped<UserRepository>();
 
-// Cấu hình CORS để cho phép MVC gọi API
+// CORS cho phép MVC client
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowMvcApp", builder =>
+    options.AddPolicy("AllowMvcApp", policy =>
     {
-        builder.WithOrigins("https://localhost:7068", "http://localhost:5088")
-               .AllowAnyMethod()
-               .AllowAnyHeader()
-               .AllowCredentials();
+        policy.WithOrigins("https://localhost:7068", "http://localhost:5088")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 
-// Mongo
-var mongoConfig = builder.Configuration.GetSection("MongoDbSettings").Get<MongoDbSettings>();
-builder.Services.AddSingleton(sp =>
-    new MongoDbContext(mongoConfig.ConnectionString, mongoConfig.DatabaseName));
+builder.Services.AddControllers();
 
 // 🚀 Build app
 var app = builder.Build();
@@ -163,7 +131,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-// Khởi tạo vai trò
+
+// 🚀 Khởi tạo vai trò
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -174,7 +143,7 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "Có lỗi xảy ra khi khởi tạo vai trò trong cơ sở dữ liệu.");
+        logger.LogError(ex, "Lỗi khi khởi tạo vai trò.");
     }
 }
 
@@ -183,8 +152,7 @@ app.UseHttpsRedirection();
 app.UseCors("AllowMvcApp");
 app.UseIpRateLimiting();
 app.UseRouting();
-
-app.UseAuthentication(); // BẮT BUỘC đặt trước UseAuthorization
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
