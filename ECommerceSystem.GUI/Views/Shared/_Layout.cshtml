@@ -6,98 +6,630 @@
     <title>@ViewData["Title"] - ECommerceSystem</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #f59e0b;
+            --dark-color: #1e293b;
+            --light-color: #f8fafc;
+            --text-color: #334155;
+            --border-color: #e2e8f0;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: #ffffff;
+        }
+
+        /* Header Styles */
+        .header-container {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: white;
+            box-shadow: var(--shadow);
+        }
+
+        .top-announcement {
+            background: linear-gradient(135deg, var(--primary-color), #3b82f6);
+            color: white;
+            padding: 8px 0;
+            text-align: center;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .main-header {
+            background: white;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+            .logo:hover {
+                color: var(--primary-color);
+                transform: scale(1.05);
+            }
+
+        .search-container {
+            position: relative;
+            flex: 1;
+            max-width: 500px;
+            margin: 0 2rem;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 20px 12px 50px;
+            border: 2px solid var(--border-color);
+            border-radius: 50px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: var(--light-color);
+        }
+
+            .search-input:focus {
+                outline: none;
+                border-color: var(--primary-color);
+                box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+                background: white;
+            }
+
+        .search-icon {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #64748b;
+            font-size: 1.1rem;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .header-action {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 8px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            color: var(--text-color);
+            transition: all 0.3s ease;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+            .header-action:hover {
+                background: var(--light-color);
+                color: var(--primary-color);
+                transform: translateY(-1px);
+            }
+
+            .header-action.cart {
+                background: var(--primary-color);
+                color: white;
+                border-radius: 25px;
+                padding: 10px 20px;
+            }
+
+                .header-action.cart:hover {
+                    background: #1d4ed8;
+                    color: white;
+                    transform: translateY(-2px);
+                    box-shadow: var(--shadow);
+                }
+
+        .auth-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .login-btn {
+            background: var(--primary-color);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+            .login-btn:hover {
+                background: #1d4ed8;
+                color: white;
+                transform: translateY(-1px);
+                box-shadow: var(--shadow);
+            }
+
+        .logout-btn {
+            background: transparent;
+            color: var(--text-color);
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+            .logout-btn:hover {
+                background: #fee2e2;
+                border-color: #fca5a5;
+                color: #dc2626;
+            }
+
+        .user-greeting {
+            color: var(--text-color);
+            font-weight: 600;
+        }
+
+        /* Navigation Menu */
+        .nav-menu {
+            background: var(--dark-color);
+            padding: 0;
+            position: relative;
+        }
+
+            .nav-menu::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 1px;
+                background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            }
+
+        .nav-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0;
+        }
+
+        .nav-item {
+            position: relative;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 16px 24px;
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+            .nav-link::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+                transition: left 0.5s ease;
+            }
+
+            .nav-link:hover::before {
+                left: 100%;
+            }
+
+            .nav-link:hover {
+                color: var(--secondary-color);
+                background: rgba(245, 158, 11, 0.1);
+                transform: translateY(-2px);
+            }
+
+            .nav-link::after {
+                content: '';
+                position: absolute;
+                bottom: 0;
+                left: 50%;
+                width: 0;
+                height: 3px;
+                background: var(--secondary-color);
+                transition: all 0.3s ease;
+                transform: translateX(-50%);
+            }
+
+            .nav-link:hover::after {
+                width: 80%;
+            }
+
+        /* Loading Animation */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            backdrop-filter: blur(4px);
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--border-color);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+       
+
+        /* Main Content */
+        .main-content {
+            min-height: calc(100vh - 200px);
+            padding: 2rem 0;
+        }
+
+        /* Footer */
+        .footer {
+            background: linear-gradient(135deg, var(--dark-color), #0f172a);
+            color: white;
+            margin-top: 4rem;
+        }
+
+        .footer-content {
+            padding: 3rem 0 1rem;
+        }
+
+        .footer-section h5 {
+            color: var(--secondary-color);
+            margin-bottom: 1rem;
+            font-weight: 600;
+            position: relative;
+        }
+
+            .footer-section h5::after {
+                content: '';
+                position: absolute;
+                bottom: -5px;
+                left: 0;
+                width: 30px;
+                height: 2px;
+                background: var(--secondary-color);
+            }
+
+        .footer-link {
+            color: #cbd5e1;
+            text-decoration: none;
+            padding: 0.25rem 0;
+            display: block;
+            transition: all 0.3s ease;
+        }
+
+            .footer-link:hover {
+                color: var(--secondary-color);
+                padding-left: 0.5rem;
+            }
+
+        .footer-contact {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            color: #cbd5e1;
+        }
+
+        .footer-bottom {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1rem 0;
+            text-align: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+     
+       
+       
+        /* Utility Classes */
+        .btn-modern {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+            .btn-modern:hover {
+                background: #1d4ed8;
+                transform: translateY(-1px);
+                box-shadow: var(--shadow);
+            }
+    </style>
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-dark bg-primary">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-controller="Home" asp-action="Index">
-                    <img src="~/images/logo.png" alt="ECommerceSystem" height="30" />
-                </a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false" aria-label="Chuyển đổi điều hướng">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarContent">
-                    <ul class="navbar-nav me-auto">
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Home" asp-action="Index">Trang chủ</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Product" asp-action="Index">Sản phẩm</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Category" asp-action="Index">Danh mục</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Order" asp-action="Create">Đặt hàng</a>
-                        </li>
-                        @if (User.IsInRole("Admin"))
-                        {
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    Quản trị
-                                </a>
-                                <ul class="dropdown-menu" aria-labelledby="adminDropdown">
-                                    <li><a class="dropdown-item" asp-controller="Admin" asp-action="Index">Bảng điều khiển</a></li>
-                                    <li><a class="dropdown-item" asp-controller="Category" asp-action="Index">Quản lý danh mục</a></li>
-                                </ul>
-                            </li>
-                        }
-                    </ul>
-                    <ul class="navbar-nav">
+    <div class="header-container">
+        <!-- Top announcement bar -->
+        <div class="top-announcement">
+            <div class="container">
+                <span><i class="fas fa-shipping-fast me-2"></i>Miễn phí vận chuyển cho đơn hàng trên 500k</span>
+            </div>
+        </div>
+
+        <!-- Main header -->
+        <div class="main-header">
+            <div class="container">
+                <div class="d-flex align-items-center justify-content-between">
+                    <!-- Logo -->
+                    <a class="logo" asp-controller="Home" asp-action="Index">
+                        <i class="fas fa-store me-2"></i>
+                        <span>ECommerce</span>
+                    </a>
+
+                    <!-- Search bar -->
+                    <div class="search-container">
+                        <i class="fas fa-search search-icon"></i>
+                        <input class="search-input" type="text" placeholder="Tìm kiếm sản phẩm, thương hiệu...">
+                    </div>
+
+                    <!-- Header actions -->
+                    <div class="header-actions">
+                        <a href="#" class="header-action">
+                            <i class="fas fa-phone"></i>
+                            <span class="d-none d-md-inline">1800.2097</span>
+                        </a>
+                        <a href="#" class="header-action">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span class="d-none d-md-inline">Cửa hàng</span>
+                        </a>
+                        <a href="#" class="header-action">
+                            <i class="fas fa-truck"></i>
+                            <span class="d-none d-md-inline">Tra cứu</span>
+                        </a>
+                        <a href="#" class="header-action cart">
+                            <i class="fas fa-shopping-cart"></i>
+                            <span>Giỏ hàng</span>
+                            <span class="badge bg-danger ms-1">0</span>
+                        </a>
+                    </div>
+
+                    <!-- Authentication section -->
+                    <div class="auth-section">
                         @if (User.Identity.IsAuthenticated)
                         {
-                            <li class="nav-item">
-                                <span class="nav-link text-light">Xin chào, @User.Identity.Name</span>
-                            </li>
-                            <li class="nav-item">
-                                <form asp-action="Logout" asp-controller="Account" method="post">
-                                    @Html.AntiForgeryToken()
-                                    <button type="submit" class="btn btn-outline-light">Đăng xuất</button>
-                                </form>
-                            </li>
+                            <span class="user-greeting">
+                                <i class="fas fa-user-circle me-1"></i>
+                                Xin chào, @User.Identity.Name
+                            </span>
+                            <form asp-action="Logout" asp-controller="Account" method="post" style="display: inline;">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="logout-btn">
+                                    <i class="fas fa-sign-out-alt me-1"></i>
+                                    Đăng xuất
+                                </button>
+                            </form>
                         }
                         else
                         {
-                            <li class="nav-item">
-                                <a class="nav-link text-light" asp-controller="Account" asp-action="Login">Đăng nhập</a>
-                            </li>
+                            <a class="login-btn" asp-controller="Account" asp-action="Login">
+                                <i class="fas fa-user me-1"></i>
+                                Đăng nhập
+                            </a>
                         }
-                    </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation menu -->
+        <nav class="nav-menu">
+            <div class="container">
+                <div class="nav-container">
+                    <div class="nav-item">
+                        <a href="#" class="nav-link">
+                            <i class="fab fa-apple"></i>
+                            <span>iPhone</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="#" class="nav-link">
+                            <i class="fas fa-tablet-alt"></i>
+                            <span>iPad</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="#" class="nav-link">
+                            <i class="fas fa-laptop"></i>
+                            <span>MacBook</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="#" class="nav-link">
+                            <i class="fas fa-clock"></i>
+                            <span>Apple Watch</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="#" class="nav-link">
+                            <i class="fas fa-headphones"></i>
+                            <span>AirPods</span>
+                        </a>
+                    </div>
                 </div>
             </div>
         </nav>
-    </header>
+    </div>
+
+    <!-- Loading overlay -->
+    <div id="loading" class="loading-overlay d-none">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Main content -->
     <div class="container">
-        <main role="main" class="pb-3">
-            <div id="loading" class="d-none text-center">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Đang tải...</span>
-                </div>
-            </div>
+        <main role="main" class="main-content">
             @RenderBody()
         </main>
     </div>
-    <footer class="border-top footer text-muted bg-light">
-        <div class="container text-center">
-            © 2025 - ECommerceSystem - <a asp-controller="Home" asp-action="Privacy">Chính sách bảo mật</a>
-            <div class="mt-2">
-                <a href="#" class="text-muted mx-2">Facebook</a> |
-                <a href="#" class="text-muted mx-2">Twitter</a> |
-                <a href="#" class="text-muted mx-2">Email</a>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="container">
+                <div class="row">
+                    <div class="col-lg-4 col-md-6 mb-4">
+                        <div class="footer-section">
+                            <h5><i class="fas fa-store me-2"></i>ECommerce Shop</h5>
+                            <p class="mb-3">Giải pháp mua sắm chuyên nghiệp, hiện đại và tiện lợi. Chúng tôi cam kết mang đến cho bạn những sản phẩm chất lượng nhất với dịch vụ tốt nhất.</p>
+                            <div class="d-flex gap-3">
+                                <a href="#" class="text-white"><i class="fab fa-facebook-f"></i></a>
+                                <a href="#" class="text-white"><i class="fab fa-twitter"></i></a>
+                                <a href="#" class="text-white"><i class="fab fa-instagram"></i></a>
+                                <a href="#" class="text-white"><i class="fab fa-youtube"></i></a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-2 col-md-6 mb-4">
+                        <div class="footer-section">
+                            <h5>Sản phẩm</h5>
+                            <ul class="list-unstyled">
+                                <li><a href="#" class="footer-link">iPhone</a></li>
+                                <li><a href="#" class="footer-link">iPad</a></li>
+                                <li><a href="#" class="footer-link">MacBook</a></li>
+                                <li><a href="#" class="footer-link">Apple Watch</a></li>
+                                <li><a href="#" class="footer-link">AirPods</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <div class="footer-section">
+                            <h5>Hỗ trợ</h5>
+                            <ul class="list-unstyled">
+                                <li><a href="#" class="footer-link">Chính sách bảo mật</a></li>
+                                <li><a href="#" class="footer-link">Điều khoản sử dụng</a></li>
+                                <li><a href="#" class="footer-link">Chính sách đổi trả</a></li>
+                                <li><a href="#" class="footer-link">Hướng dẫn mua hàng</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <div class="footer-section">
+                            <h5>Liên hệ</h5>
+                            <div class="footer-contact">
+                                <i class="fas fa-envelope"></i>
+                                <span>contact@ecommerce.com</span>
+                            </div>
+                            <div class="footer-contact">
+                                <i class="fas fa-phone"></i>
+                                <span>1800.2097</span>
+                            </div>
+                            <div class="footer-contact">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>TP. Hồ Chí Minh, Việt Nam</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <div class="container">
+                <p class="mb-0">&copy; 2025 ECommerce Shop. All rights reserved. Made with <i class="fas fa-heart text-danger"></i> in Vietnam</p>
             </div>
         </div>
     </footer>
+
     <script src="~/lib/jquery/dist/jquery.min.js" defer></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js" defer></script>
     <script src="~/js/site.js" asp-append-version="true" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.validate/1.19.3/jquery.validate.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.validate.unobtrusive/3.2.12/jquery.validate.unobtrusive.min.js" defer></script>
+
     <script>
-        $(document).ajaxStart(function () { $("#loading").removeClass("d-none"); });
-        $(document).ajaxComplete(function () { $("#loading").addClass("d-none"); });
-        $(document).ready(function () {
-            $("form").submit(function () { $("#loading").removeClass("d-none"); });
+        $(document).ready(function() {
+            // Loading animation
+            $(document).ajaxStart(function() {
+                $("#loading").removeClass("d-none");
+            });
+
+            $(document).ajaxComplete(function() {
+                $("#loading").addClass("d-none");
+            });
+
+            $("form").submit(function() {
+                $("#loading").removeClass("d-none");
+            });
+
+            // Search functionality
+            $('.search-input').on('focus', function() {
+                $(this).parent().addClass('search-focused');
+            }).on('blur', function() {
+                $(this).parent().removeClass('search-focused');
+            });
+
+            // Smooth scrolling for navigation links
+            $('.nav-link').on('click', function(e) {
+                const href = $(this).attr('href');
+                if (href.startsWith('#')) {
+                    e.preventDefault();
+                    $('html, body').animate({
+                        scrollTop: $(href).offset().top - 100
+                    }, 500);
+                }
+            });
+
+            // Add animation to cards and elements when they come into view
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+
+            const observer = new IntersectionObserver(function(entries) {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, observerOptions);
+
+            // Observe elements for animation
+            $('.card, .footer-section').each(function() {
+                this.style.opacity = '0';
+                this.style.transform = 'translateY(20px)';
+                this.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                observer.observe(this);
+            });
         });
     </script>
     @await RenderSectionAsync("Scripts", required: false)

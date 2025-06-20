@@ -44,9 +44,11 @@ namespace ECommerceSystem.Api.Controllers
                 new Claim(ClaimTypes.Role, role)
             };
 
+            // ✅ Tạo khóa bí mật
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:SecretKey"]));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+            // ✅ Tạo JWT token ở đây
             var token = new JwtSecurityToken(
                 issuer: _config["Jwt:Issuer"],
                 audience: _config["Jwt:Audience"],
