@@ -1,80 +1,105 @@
-﻿@model ECommerceSystem.Shared.DTOs.Product.ProductListResponse
+﻿@model IEnumerable<ECommerceSystem.Shared.DTOs.Product.ProductDTO>
 @{
-    ViewData["Title"] = "Danh sách sản phẩm";
+    ViewData["Title"] = "Quản lý sản phẩm";
 }
-<h2>@ViewData["Title"]</h2>
-<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+
+<h2>Quản lý sản phẩm</h2>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="mb-3">
+    <a class="btn btn-success" asp-action="Create"><i class="bi bi-plus"></i> Thêm sản phẩm</a>
+</div>
+
 <form asp-action="Index" method="get" class="mb-3">
-    <div class="row">
-        <div class="col-md-3">
-            <input type="text" name="search" value="@ViewBag.Search" placeholder="Tìm kiếm..." class="form-control" />
+    <div class="row g-3">
+        <div class="col-md-4">
+            <input name="searchTerm" class="form-control" placeholder="Tìm kiếm theo tên sản phẩm" value="@ViewBag.SearchTerm" />
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
             <select name="categoryId" class="form-control">
                 <option value="">Tất cả danh mục</option>
-                @if (ViewBag.Categories != null)
+                @foreach (var category in ViewBag.Categories)
                 {
-                    foreach (var category in ViewBag.Categories)
-                    {
-                        <option value="@category.Id">@category.Name</option>
-                    }
+                    <option value="@category.Id" selected="@(ViewBag.CategoryId == category.Id ? "selected" : null)">@category.Name</option>
                 }
-                else
-                {
-                    <option>Không có danh mục</option>
-                }
-
             </select>
         </div>
-        <div class="col-md-2">
-            <input type="number" name="minPrice" value="@ViewBag.MinPrice" placeholder="Giá từ" class="form-control" step="0.01" />
-        </div>
-        <div class="col-md-2">
-            <input type="number" name="maxPrice" value="@ViewBag.MaxPrice" placeholder="Giá đến" class="form-control" step="0.01" />
-        </div>
-        <input type="checkbox" name="promotion" value="true" @(Convert.ToBoolean(ViewBag.Promotion ?? false) ? "checked" : "") /> Khuyến mãi
-
-    </div>
-    <div class="row mt-2">
-        <div class="col-md-3">
-            <select name="sortBy" class="form-control">
-                <option value="">Sắp xếp mặc định</option>
-                <option value="priceAsc" selected="@(ViewBag.SortBy == "priceAsc" ? "selected" : "")">Giá tăng</option>
-                <option value="priceDesc" selected="@(ViewBag.SortBy == "priceDesc" ? "selected" : "")">Giá giảm</option>
-                <option value="rating" selected="@(ViewBag.SortBy == "rating" ? "selected" : "")">Đánh giá</option>
-            </select>
-        </div>
-        <div class="col-md-3">
-            <button type="submit" class="btn btn-primary">Lọc</button>
+        <div class="col-md-4">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Tìm kiếm</button>
         </div>
     </div>
 </form>
-<div class="row">
-    @foreach (var product in Model.Products)
-    {
-        <div class="col-md-4 mb-3">
-            <div class="card">
-                <img src="@product.ThumbnailUrl" class="card-img-top" alt="@product.Name" style="height: 200px; object-fit: cover;" />
-                <div class="card-body">
-                    <h5 class="card-title">@product.Name</h5>
-                    <p class="card-text">Giá: @product.Price VNĐ</p>
-                    <p class="card-text">Đánh giá: @product.Rating</p>
-                    @if (product.IsPromoted)
-                    {
-                        <span class="badge badge-success">Khuyến mãi</span>
-                    }
-                </div>
-            </div>
-        </div>
-    }
-</div>
-<nav>
-    <ul class="pagination">
-        @for (var i = 1; i <= Math.Ceiling((double)Model.Total / Model.PageSize); i++)
+
+<table class="table table-bordered table-hover">
+    <thead class="table-light">
+        <tr>
+            <th>Tên</th>
+            <th>Giá (VND)</th>
+            <th>Danh mục</th>
+            <th>Khuyến mãi</th>
+            <th>Thao tác</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
         {
-            <li class="page-item @(i == Model.Page ? "active" : "")">
-                <a class="page-link" href="?page=@i&search=@ViewBag.Search&categoryId=@ViewBag.CategoryId&minPrice=@ViewBag.MinPrice&maxPrice=@ViewBag.MaxPrice&promotion=@ViewBag.Promotion&sortBy=@ViewBag.SortBy">@i</a>
-            </li>
+            <tr>
+                <td>@item.Name</td>
+                <td>@item.Price.ToString("N0")</td>
+                <td>
+                    @{
+                        var categories = (IEnumerable<dynamic>)ViewBag.Categories;
+                        var category = categories.FirstOrDefault(c => c.Id == item.CategoryId);
+
+                        @((category != null ? category.Name : "Không có danh mục"))
+                    }
+                </td>
+                <td>@(item.IsPromoted ? "✔️" : "❌")</td>
+                <td>
+                    <a class="btn btn-sm btn-primary" asp-action="Edit" asp-route-id="@item.Id"><i class="bi bi-pencil"></i> Sửa</a>
+                    <form asp-action="Delete" asp-route-id="@item.Id" method="post" style="display:inline;" onsubmit="return confirm('Bạn có chắc muốn xóa sản phẩm này?');">
+                        <button type="submit" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i> Xóa</button>
+                    </form>
+                </td>
+            </tr>
         }
-    </ul>
-</nav>
+    </tbody>
+</table>
+
+@if (ViewBag.TotalPages > 1)
+{
+    <nav aria-label="Page navigation">
+        <ul class="pagination">
+            <li class="page-item @(ViewBag.CurrentPage == 1 ? "disabled" : "")">
+                <a class="page-link" asp-action="Index" asp-route-page="@(ViewBag.CurrentPage - 1)" asp-route-searchTerm="@ViewBag.SearchTerm" asp-route-categoryId="@ViewBag.CategoryId">Trước</a>
+            </li>
+            @for (int i = 1; i <= ViewBag.TotalPages; i++)
+            {
+                <li class="page-item @(i == ViewBag.CurrentPage ? "active" : "")">
+                    <a class="page-link" asp-action="Index" asp-route-page="@i" asp-route-searchTerm="@ViewBag.SearchTerm" asp-route-categoryId="@ViewBag.CategoryId">@i</a>
+                </li>
+            }
+            <li class="page-item @(ViewBag.CurrentPage == ViewBag.TotalPages ? "disabled" : "")">
+                <a class="page-link" asp-action="Index" asp-route-page="@(ViewBag.CurrentPage + 1)" asp-route-searchTerm="@ViewBag.SearchTerm" asp-route-categoryId="@ViewBag.CategoryId">Sau</a>
+            </li>
+        </ul>
+    </nav>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

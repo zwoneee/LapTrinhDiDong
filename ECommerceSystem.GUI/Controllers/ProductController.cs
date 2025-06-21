@@ -1,107 +1,154 @@
-﻿////using ECommerceSystem.GUI.Apis;
-////using ECommerceSystem.Shared.DTOs.Product;
-////using Microsoft.AspNetCore.Mvc;
-////using System.Text.Json;
+﻿using ECommerceSystem.GUI.Apis;
+using ECommerceSystem.Shared.DTOs.Product;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Caching.Memory;
 
-////public class ProductController : Controller
-////{
-////    private readonly IProductApi _productApi;
-////    private readonly ICategoryApi _categoryApi;
+namespace ECommerceSystem.GUI.Controllers
+{
+    [Authorize(Roles = "Admin")]
+    [Route("[controller]/[action]")]
+    public class ProductController : Controller
+    {
+        private readonly IProductApi _productApi;
+        private readonly ICategoryApi _categoryApi;
+        private readonly IMemoryCache _cache;
+        private const string CategoriesCacheKey = "CategoriesList";
 
-////    public ProductController(IProductApi productApi, ICategoryApi categoryApi)
-////    {
-////        _productApi = productApi;
-////        _categoryApi = categoryApi;
-////    }
+        public ProductController(IProductApi productApi, ICategoryApi categoryApi, IMemoryCache cache)
+        {
+            _productApi = productApi;
+            _categoryApi = categoryApi;
+            _cache = cache;
+        }
 
-////    public async Task<IActionResult> Index(
-////     string? search, int? categoryId, decimal? minPrice, decimal? maxPrice,
-////     string? sortBy, bool? promotion, int page = 1)
-////    {
-////        int pageSize = 9;
+        private async Task<object> GetCachedCategoriesAsync()
+        {
+            if (!_cache.TryGetValue(CategoriesCacheKey, out var categories))
+            {
+                categories = await _categoryApi.GetAllAsync();
+                var cacheOptions = new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1));
+                _cache.Set(CategoriesCacheKey, categories, cacheOptions);
+            }
+            return categories;
+        }
 
-////        var response = await _productApi.GetProductsAsync(search, categoryId, minPrice, maxPrice, sortBy, promotion, page, pageSize);
+        public async Task<IActionResult> Index(string searchTerm, int? categoryId, int page = 1, int pageSize = 10)
+        {
+            try
+            {
+                var productsResponse = await _productApi.GetProductsAsync(searchTerm, categoryId, null, null, null, null, page, pageSize);
+                ViewBag.Categories = await GetCachedCategoriesAsync();
+                ViewBag.SearchTerm = searchTerm;
+                ViewBag.CategoryId = categoryId;
+                ViewBag.CurrentPage = page;
+                ViewBag.TotalPages = (int)Math.Ceiling(productsResponse.Total / (double)pageSize);
+                return View(productsResponse.Products);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Lỗi khi tải danh sách sản phẩm: {ex.Message}";
+                return View(new List<ProductDTO>());
+            }
+        }
 
-////        if (!response.IsSuccessStatusCode || response.Content == null)
-////        {
-////            return View(new ProductListResponse { Products = new(), Total = 0, Page = page, PageSize = pageSize });
-////        }
+        public async Task<IActionResult> Create()
+        {
+            ViewBag.Categories = await GetCachedCategoriesAsync();
+            return View(new ProductDTO());
+        }
 
-////        // ✅ Deserialize JsonElement về ProductListResponse
-////        var jsonElement = (JsonElement)response.Content;
-////        var result = JsonSerializer.Deserialize<ProductListResponse>(
-////            jsonElement.GetRawText(),
-////            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-////        );
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(ProductDTO dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                ViewBag.Categories = await GetCachedCategoriesAsync();
+                return View(dto);
+            }
 
-////        // Giữ lại dữ liệu lọc
-////        ViewBag.Search = search;
-////        ViewBag.CategoryId = categoryId;
-////        ViewBag.MinPrice = minPrice;
-////        ViewBag.MaxPrice = maxPrice;
-////        ViewBag.Promotion = promotion;
-////        ViewBag.SortBy = sortBy;
+            try
+            {
+                await _productApi.CreateAsync(dto);
+                TempData["Success"] = "Sản phẩm đã được tạo thành công!";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Lỗi khi tạo sản phẩm: {ex.Message}";
+                ViewBag.Categories = await GetCachedCategoriesAsync();
+                return View(dto);
+            }
+        }
 
-////        // Lấy danh mục
-////        var categories = await _categoryApi.GetAllAsync();
+        public async Task<IActionResult> Edit(int id)
+        {
+            try
+            {
+                var product = await _productApi.GetByIdAsync(id);
+                if (product == null)
+                {
+                    TempData["Error"] = "Sản phẩm không tồn tại.";
+                    return RedirectToAction(nameof(Index));
+                }
+                ViewBag.Categories = await GetCachedCategoriesAsync();
+                return View(product);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Lỗi khi tải sản phẩm: {ex.Message}";
+                return RedirectToAction(nameof(Index));
+            }
+        }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(int id, ProductDTO dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                ViewBag.Categories = await GetCachedCategoriesAsync();
+                return View(dto);
+            }
 
-////        return View(result); // ✅ truyền đúng kiểu model
-////    }
+            try
+            {
+                await _productApi.UpdateAsync(id, dto);
+                TempData["Success"] = "Sản phẩm đã được cập nhật thành công!";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Lỗi khi cập nhật sản phẩm: {ex.Message}";
+                ViewBag.Categories = await GetCachedCategoriesAsync();
+                return View(dto);
+            }
+        }
 
-////}
-//using ECommerceSystem.GUI.Apis;
-//using ECommerceSystem.Shared.DTOs.Product;
-//using Microsoft.AspNetCore.Mvc;
-
-//public class ProductController : Controller
-//{
-//    private readonly IProductApi _productApi;
-//    private readonly ICategoryApi _categoryApi;
-
-//    public ProductController(IProductApi productApi, ICategoryApi categoryApi)
-//    {
-//        _productApi = productApi;
-//        _categoryApi = categoryApi;
-//    }
-
-//    public async Task<IActionResult> Create()
-//    {
-//        ViewBag.Categories = await _categoryApi.GetAllAsync();
-//        return View(new ProductDTO());
-//    }
-
-//    [HttpPost]
-//    [ValidateAntiForgeryToken]
-//    public async Task<IActionResult> Create(ProductDTO model)
-//    {
-//        if (!ModelState.IsValid) return View(model);
-
-//        await _productApi.CreateAsync(model);
-//        return RedirectToAction("Index");
-//    }
-
-//    public async Task<IActionResult> Edit(int id)
-//    {
-//        var product = await _productApi.GetByIdAsync(id);
-//        ViewBag.Categories = await _categoryApi.GetAllAsync();
-//        return View(product);
-//    }
-
-//    [HttpPost]
-//    [ValidateAntiForgeryToken]
-//    public async Task<IActionResult> Edit(ProductDTO model)
-//    {
-//        if (!ModelState.IsValid) return View(model);
-
-//        await _productApi.UpdateAsync(model.Id, model);
-//        return RedirectToAction("Index");
-//    }
-
-//    [HttpPost]
-//    public async Task<IActionResult> Delete(int id)
-//    {
-//        await _productApi.DeleteAsync(id);
-//        return RedirectToAction("Index");
-//    }
-//}
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Delete(int id)
+        {
+            try
+            {
+                var product = await _productApi.GetByIdAsync(id);
+                if (product == null)
+                {
+                    TempData["Error"] = "Sản phẩm không tồn tại.";
+                    return RedirectToAction(nameof(Index));
+                }
+                await _productApi.DeleteAsync(id);
+                TempData["Success"] = "Sản phẩm đã được xóa thành công!";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Lỗi khi xóa sản phẩm: {ex.Message}";
+                return RedirectToAction(nameof(Index));
+            }
+        }
+    }
+}
