@@ -6,9 +6,6 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Identity;
-using ECommerceSystem.Shared.DTOs;
 using ECommerceSystem.Shared.DTOs.Models;
 using ECommerceSystem.Shared.DTOs.User;
 
@@ -18,14 +15,12 @@ namespace ECommerceSystem.Api.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
-        private readonly UserRepository _userRepository;
-        private readonly UserManager<User> _userManager;
+        private readonly UserRepository _userRepo;
         private readonly IConfiguration _config;
 
-        public AuthController(UserRepository userRepository, UserManager<User> userManager, IConfiguration config)
+        public AuthController(UserRepository userRepo, IConfiguration config)
         {
-            _userRepository = userRepository;
-            _userManager = userManager;
+            _userRepo = userRepo;
             _config = config;
         }
 
@@ -33,69 +28,63 @@ namespace ECommerceSystem.Api.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Login([FromBody] LoginModel model)
         {
-            var user = await _userManager.FindByNameAsync(model.Username);
-            if (user == null || user.IsDeleted)
+            var user = await _userRepo.GetUserPasswordHash(model.Username);
+            if (user == null || !BCrypt.Net.BCrypt.Verify(model.Password, user.PasswordHash))
             {
                 return Unauthorized(new { error = "Tên đăng nhập hoặc mật khẩu không đúng." });
             }
 
-            if (await _userManager.CheckPasswordAsync(user, model.Password))
+            var (userDto, role) = await _userRepo.GetUserInfoAndRole(user.UserName);
+
+            var claims = new[]
             {
-                var roles = await _userManager.GetRolesAsync(user);
-                var role = roles.FirstOrDefault();
-                if (string.IsNullOrWhiteSpace(role))
-                {
-                    return Unauthorized(new { error = "Người dùng không có vai trò được cấp quyền." });
-                }
+                new Claim(ClaimTypes.Name, user.UserName),
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Role, role)
+            };
 
-                var claims = new[]
-                {
-                    new Claim(ClaimTypes.Name, user.Name),
-                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                    new Claim(ClaimTypes.Email, user.Email),
-                    new Claim(ClaimTypes.Role, role)
-                };
+            // ✅ Tạo khóa bí mật
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:SecretKey"]));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-                var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:SecretKey"]));
-                var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            // ✅ Tạo JWT token ở đây
+            var token = new JwtSecurityToken(
+                issuer: _config["Jwt:Issuer"],
+                audience: _config["Jwt:Audience"],
+                claims: claims,
+                expires: DateTime.UtcNow.AddHours(1),
+                signingCredentials: creds
+            );
 
-                var token = new JwtSecurityToken(
-                    issuer: _config["Jwt:Issuer"],
-                    audience: _config["Jwt:Audience"],
-                    claims: claims,
-                    expires: DateTime.UtcNow.AddHours(1),
-                    signingCredentials: creds
-                );
-
-                return Ok(new
-                {
-                    token = new JwtSecurityTokenHandler().WriteToken(token),
-                    role = role,
-                    userId = user.Id
-                });
-            }
-
-            return Unauthorized(new { error = "Tên đăng nhập hoặc mật khẩu không đúng." });
+            return Ok(new
+            {
+                token = new JwtSecurityTokenHandler().WriteToken(token),
+                role = role,
+                userId = user.Id
+            });
         }
 
         [HttpPost("register")]
         [AllowAnonymous]
         public async Task<IActionResult> Register([FromBody] RegisterModel model)
         {
-            var existingUser = await _userManager.FindByEmailAsync(model.Email);
-            if (existingUser != null)
+            var existing = await _userRepo.GetUserPasswordHash(model.UserName);
+            if (existing != null)
             {
-                return BadRequest(new { error = "Email đã được sử dụng." });
+                return BadRequest(new { error = "Tên đăng nhập đã tồn tại." });
             }
 
-            // Tìm role 'User'
-            var role = await _userRepository.GetRoleByName("User");
+            // Kiểm tra và tạo Role 'User' nếu chưa có
+            var role = await _userRepo.GetRoleByName("User");
             if (role == null)
             {
-                return StatusCode(500, new { error = "Role mặc định không tồn tại. Vui lòng tạo role 'User' trong DB." });
+                role = new Role { Name = "User" };
+                await _userRepo.CreateRoleAsync(role); // ⚠️ cần thêm method này trong UserRepository
             }
 
-            // Khởi tạo user
+            var hashedPassword = BCrypt.Net.BCrypt.HashPassword(model.Password);
+
             var user = new User
             {
                 UserName = model.UserName,
@@ -104,21 +93,13 @@ namespace ECommerceSystem.Api.Controllers
                 RoleId = role.Id,
                 CreatedAt = DateTime.UtcNow,
                 IsDeleted = false,
+                PasswordHash = hashedPassword,
                 DeviceToken = ""
             };
 
             try
             {
-                // Tạo user
-                var result = await _userManager.CreateAsync(user, model.Password);
-                if (!result.Succeeded)
-                {
-                    return StatusCode(500, new { error = "Không thể tạo người dùng.", details = result.Errors });
-                }
-
-                // Gán vào vai trò 'User'
-                await _userManager.AddToRoleAsync(user, "User");
-
+                await _userRepo.CreateUserAsync(user, hashedPassword);
                 return Ok(new { message = "Đăng ký thành công." });
             }
             catch (Exception ex)
@@ -127,44 +108,33 @@ namespace ECommerceSystem.Api.Controllers
             }
         }
 
-        [HttpPost("refresh")]
-        [AllowAnonymous]
-        public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest model)
-        {
-            // Validate refreshToken → cấp lại accessToken mới
-            return Ok(new RefreshTokenResponse { AccessToken = "new...", RefreshToken = "new..." });
-        }
-
 
         [HttpPost("role")]
-        //[Authorize]
+        [Authorize]
         public async Task<IActionResult> GetUserRole()
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userId))
             {
-                Console.WriteLine("Không tìm thấy userId trong token");
-                return Unauthorized(new { message = "Không tìm thấy ID người dùng trong mã thông báo" });
+                return Unauthorized(new { error = "Không tìm thấy người dùng trong token." });
             }
 
-            var user = await _userManager.FindByIdAsync(userId);
+            var user = await _userRepo.GetUserPasswordHashById(int.Parse(userId));
             if (user == null)
             {
-                Console.WriteLine($"Không tìm thấy người dùng với ID: {userId}");
-                return NotFound(new { message = "Không tìm thấy người dùng" });
+                return NotFound(new { error = "Người dùng không tồn tại." });
             }
 
-            var roles = await _userManager.GetRolesAsync(user);
-            if (roles == null || !roles.Any())
-            {
-                Console.WriteLine($"Không tìm thấy vai trò cho người dùng ID: {userId}");
-                return NotFound(new { message = "Không có vai trò nào được gán cho người dùng" });
-            }
+            var (_, role) = await _userRepo.GetUserInfoAndRole(user.UserName);
+            return Ok(new { role = role });
+        }
 
-            Console.WriteLine($"Vai trò tìm thấy: {roles.First()}");
-            return Ok(new { role = roles.First() });
+        [HttpPost("refresh")]
+        [AllowAnonymous]
+        public IActionResult Refresh([FromBody] RefreshTokenRequest model)
+        {
+            // TODO: Xử lý token refresh thực tế
+            return Ok(new RefreshTokenResponse { AccessToken = "new-token", RefreshToken = "new-refresh" });
         }
     }
-
-    
 }
