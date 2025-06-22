@@ -181,7 +181,7 @@ using (var scope = app.Services.CreateScope())
 // 🛡️ Middlewares
 app.UseHttpsRedirection();
 app.UseCors("AllowMvcApp");
-app.UseIpRateLimiting();
+//app.UseIpRateLimiting();
 app.UseRouting();
 
 app.UseAuthentication(); // BẮT BUỘC đặt trước UseAuthorization
