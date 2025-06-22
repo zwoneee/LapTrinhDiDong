@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ECommerceSystem.Api.Migrations
 {
     [DbContext(typeof(WebDBContext))]
-    partial class WebDBContextModelSnapshot : ModelSnapshot
+    [Migration("20250622162944_AddIsDeletedSupport")]
+    partial class AddIsDeletedSupport
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -329,7 +332,8 @@ namespace ECommerceSystem.Api.Migrations
                     b.HasOne("ECommerceSystem.Shared.Entities.Product", "Product")
                         .WithMany()
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("ECommerceSystem.Api.Data.ShoppingCart", "ShoppingCart")
                         .WithMany("CartDetails")
