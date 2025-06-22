@@ -1,48 +1,125 @@
-﻿//using ECommerceSystem.Shared.DTOs.Product;
-//using ECommerceSystem.Shared.Entities;
-//using Microsoft.AspNetCore.Mvc;
+﻿using ECommerceSystem.GUI.Apis;
+using ECommerceSystem.Shared.DTOs.Models;
+using ECommerceSystem.Shared.DTOs.Product;
+using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
 
-//public class CartController : Controller
-//{
-//    private readonly ICartApi _cartApi;
-//    private readonly IHttpContextAccessor _httpContextAccessor;
+namespace ECommerceSystem.GUI.Controllers
+{
+    public class CartController : Controller
+    {
+        private readonly ICartApi _cartApi;
 
-//    public CartController(ICartApi cartApi, IHttpContextAccessor httpContextAccessor)
-//    {
-//        _cartApi = cartApi;
-//        _httpContextAccessor = httpContextAccessor;
-//    }
+        public CartController(ICartApi cartApi)
+        {
+            _cartApi = cartApi;
+        }
 
-//    private int GetCurrentUserId()
-//    {
-//        // Hoặc logic từ token/session
-//        return int.Parse(User.FindFirst("userId")?.Value ?? "0");
-//    }
+        // Hiển thị giỏ hàng
+        public async Task<IActionResult> Index()
+        {
+            try
+            {
+                var cart = await _cartApi.GetCart();
+                return View(cart);
+            }
+            catch
+            {
+                TempData["ErrorMessage"] = "Không thể tải giỏ hàng.";
+                return RedirectToAction("Error", "Home");
+            }
+        }
 
-//    public async Task<IActionResult> Index()
-//    {
-//        var cart = await _cartApi.GetCartAsync(GetCurrentUserId());
-//        return View(cart);
-//    }
+        // Thêm sản phẩm vào giỏ
+        [HttpPost]
+        public async Task<IActionResult> AddToCart(int productId, int quantity = 1)
+        {
+            try
+            {
+                var request = new AddToCartRequest
+                {
+                    ProductId = productId,
+                    Quantity = quantity
+                };
 
-//    [HttpPost]
-//    public async Task<IActionResult> UpdateItem(CartItemDTO item)
-//    {
-//        await _cartApi.UpdateItemAsync(GetCurrentUserId(), item);
-//        return RedirectToAction("Index");
-//    }
+                await _cartApi.AddItem(request);
+                return RedirectToAction("Index");
+            }
+            catch
+            {
+                TempData["ErrorMessage"] = "Không thể thêm sản phẩm.";
+                return RedirectToAction("Index");
+            }
+        }
 
-//    [HttpPost]
-//    public async Task<IActionResult> RemoveItem(int productId)
-//    {
-//        await _cartApi.RemoveItemAsync(GetCurrentUserId(), productId);
-//        return RedirectToAction("Index");
-//    }
+        // Xoá sản phẩm
+        [HttpPost]
+        public async Task<IActionResult> DeleteItem(int productId)
+        {
+            try
+            {
+                await _cartApi.RemoveItem(productId);
+                return RedirectToAction("Index");
+            }
+            catch
+            {
+                TempData["ErrorMessage"] = "Không thể xoá sản phẩm.";
+                return RedirectToAction("Index");
+            }
+        }
 
-//    [HttpPost]
-//    public async Task<IActionResult> Clear()
-//    {
-//        await _cartApi.ClearCartAsync(GetCurrentUserId());
-//        return RedirectToAction("Index");
-//    }
-//}
+        // GET: Checkout
+        public async Task<IActionResult> Checkout()
+        {
+            try
+            {
+                var cart = await _cartApi.GetCart();
+                if (cart == null || cart.Items.Count == 0)
+                {
+                    TempData["ErrorMessage"] = "Giỏ hàng trống.";
+                    return RedirectToAction("Index");
+                }
+
+                ViewBag.Cart = cart;
+                return View(new CheckoutModel());
+            }
+            catch
+            {
+                TempData["ErrorMessage"] = "Không thể truy cập trang thanh toán.";
+                return RedirectToAction("Index");
+            }
+        }
+
+        // POST: Checkout
+        [HttpPost]
+        public async Task<IActionResult> Checkout(CheckoutModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                var cart = await _cartApi.GetCart();
+                ViewBag.Cart = cart;
+                return View(model); // Giữ lại form để người dùng sửa
+            }
+
+            try
+            {
+                var response = await _cartApi.Checkout(model);
+                if (response.IsSuccessStatusCode)
+                {
+                    TempData["SuccessMessage"] = "Thanh toán thành công!";
+                    return RedirectToAction("Index");
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = "Thanh toán thất bại.";
+                    return RedirectToAction("Checkout");
+                }
+            }
+            catch
+            {
+                TempData["ErrorMessage"] = "Đã xảy ra lỗi khi thanh toán.";
+                return RedirectToAction("Checkout");
+            }
+        }
+    }
+}

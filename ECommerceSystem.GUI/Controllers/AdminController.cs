@@ -10,5 +10,6 @@ namespace ECommerceSystem.GUI.Controllers
         {
             return View(); // => sẽ tìm Views/Admin/Index.cshtml
         }
+        public IActionResult UserActivity() => View();
     }
 }

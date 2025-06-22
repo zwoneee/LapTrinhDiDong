@@ -3,6 +3,7 @@ using ECommerceSystem.Api.Data;
 using ECommerceSystem.Api.Data.Mongo;
 using ECommerceSystem.Api.Data.Repositories;
 using ECommerceSystem.Api.Hubs;
+using ECommerceSystem.Api.Repositories;
 using ECommerceSystem.Api.Services;
 using ECommerceSystem.Shared.Entities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -83,6 +84,7 @@ builder.Services.AddSignalR();
 builder.Services.AddMemoryCache();
 builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
 builder.Services.AddInMemoryRateLimiting();
+
 builder.Services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
 builder.Services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
 builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
@@ -134,10 +136,16 @@ builder.Services.AddCors(options =>
 #endregion
 
 #region Dependency Injection
+builder.Services.AddHttpContextAccessor();
+
+
 builder.Services.AddScoped<DataSyncService>();
 builder.Services.AddScoped<UserRepository>();
+builder.Services.AddScoped<ICartRepository, CartRepository>(); // ✅ Di chuyển xuống đây
+
 builder.Services.AddControllers();
 #endregion
+
 
 var app = builder.Build();
 

@@ -13,6 +13,5 @@ namespace ECommerceSystem.Shared.DTOs.Models
 
        
     }
-
 }
 

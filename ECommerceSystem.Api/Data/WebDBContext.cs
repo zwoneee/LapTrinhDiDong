@@ -1,4 +1,5 @@
-﻿using ECommerceSystem.Shared.Entities;
+﻿using ECommerceSystem.Api.Data;
+using ECommerceSystem.Shared.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -15,6 +16,8 @@ public class WebDBContext : DbContext
     public DbSet<Category> Categories { get; set; }
     public DbSet<User> Users { get; set; }
     public DbSet<Role> Roles { get; set; }
+    public DbSet<ShoppingCart> ShoppingCarts { get; set; }
+    public DbSet<CartDetail> CartDetails { get; set; }
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -32,6 +35,24 @@ public class WebDBContext : DbContext
             .WithMany(r => r.Users)
             .HasForeignKey(u => u.RoleId)
             .OnDelete(DeleteBehavior.Restrict);
+        // Cấu hình ShoppingCart - CartDetail
+        modelBuilder.Entity<ShoppingCart>()
+            .HasMany(c => c.CartDetails)
+            .WithOne(d => d.ShoppingCart)
+            .HasForeignKey(d => d.ShoppingCartId)
+            .OnDelete(DeleteBehavior.Cascade); // Khi xóa giỏ thì xóa cả chi tiết
+
+        modelBuilder.Entity<CartDetail>()
+            .HasOne(d => d.Product)
+            .WithMany()
+            .HasForeignKey(d => d.ProductId)
+            .OnDelete(DeleteBehavior.Restrict); // Không được xoá sản phẩm nếu còn trong giỏ
+
+        // Precision cho giá
+        modelBuilder.Entity<CartDetail>()
+            .Property(c => c.UnitPrice)
+            .HasPrecision(18, 2);
+
     }
 
 
