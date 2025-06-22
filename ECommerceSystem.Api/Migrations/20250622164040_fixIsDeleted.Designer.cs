@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ECommerceSystem.Api.Migrations
 {
     [DbContext(typeof(WebDBContext))]
-    [Migration("20250622162944_AddIsDeletedSupport")]
-    partial class AddIsDeletedSupport
+    [Migration("20250622164040_fixIsDeleted")]
+    partial class fixIsDeleted
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -332,8 +332,7 @@ namespace ECommerceSystem.Api.Migrations
                     b.HasOne("ECommerceSystem.Shared.Entities.Product", "Product")
                         .WithMany()
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("ECommerceSystem.Api.Data.ShoppingCart", "ShoppingCart")
                         .WithMany("CartDetails")

@@ -101,6 +101,9 @@ static void ConfigureRefit(IServiceCollection services)
     services.AddRefitClient<ICartApi>()
        .AddHttpMessageHandler<AuthRetryHandler>()
        .ConfigureHttpClient(SetHttpClient);
+    services.AddRefitClient<IUserApi>()
+       .AddHttpMessageHandler<AuthRetryHandler>()
+       .ConfigureHttpClient(SetHttpClient);
 
     //services.AddRefitClient<IAuthApi>()
     //   .AddHttpMessageHandler<AuthRetryHandler>()

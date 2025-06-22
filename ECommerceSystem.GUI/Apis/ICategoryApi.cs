@@ -21,5 +21,8 @@ namespace ECommerceSystem.GUI.Apis
 
         [Delete("/api/public/categories/delete/{id}")]
         Task DeleteAsync(int id);
+        [Delete("/api/public/categories/delete-all")]
+        Task DeleteAllAsync();
+
     }
 }

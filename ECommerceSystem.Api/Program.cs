@@ -138,6 +138,8 @@ builder.Services.AddCors(options =>
 #region Dependency Injection
 builder.Services.AddHttpContextAccessor();
 
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<UserRepository>();
 
 builder.Services.AddScoped<DataSyncService>();
 builder.Services.AddScoped<UserRepository>();
