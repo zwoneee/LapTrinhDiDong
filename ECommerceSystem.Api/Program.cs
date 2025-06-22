@@ -1,4 +1,9 @@
+<<<<<<< HEAD
 ﻿using AspNetCoreRateLimit;
+=======
+﻿// Các thư viện cần thiết
+using AspNetCoreRateLimit;
+>>>>>>> 03e9f1b758cb92bc75a6b3a01f672e98754cefe5
 using ECommerceSystem.Api.Data;
 using ECommerceSystem.Api.Data.Mongo;
 using ECommerceSystem.Api.Data.Repositories;
@@ -6,22 +11,16 @@ using ECommerceSystem.Api.Hubs;
 using ECommerceSystem.Api.Services;
 using ECommerceSystem.Shared.Entities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
 using System.Text;
-using Role = ECommerceSystem.Shared.Entities.Role;
-using Microsoft.Extensions.Caching.StackExchangeRedis;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc.Authorization;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.DependencyInjection;
-using ECommerceSystem.Shared.Entities;
 
+// Khởi tạo builder
 var builder = WebApplication.CreateBuilder(args);
 
-// 🔍 Swagger
+#region Swagger (OpenAPI)
+// Cấu hình Swagger để hiển thị tài liệu API
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -31,16 +30,17 @@ builder.Services.AddSwaggerGen(c =>
         Version = "v1"
     });
 
-    // ✅ Cấu hình bảo mật với JWT Bearer
+    // Cho phép nhập token thuần (không cần "Bearer ")
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
-        Description = "Nhập JWT token theo định dạng: Bearer {token}",
+        Description = "Chỉ dán JWT token vào đây (KHÔNG cần thêm 'Bearer ' ở đầu)",
         Name = "Authorization",
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
         Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
         Scheme = "Bearer"
     });
 
+    // Áp dụng xác thực cho tất cả các API
     c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
     {
         {
@@ -51,67 +51,69 @@ builder.Services.AddSwaggerGen(c =>
                     Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
                     Id = "Bearer"
                 },
-                Scheme = "oauth2",
-                Name = "Bearer",
+                Scheme = "Bearer",
+                Name = "Authorization",
                 In = Microsoft.OpenApi.Models.ParameterLocation.Header
             },
             new List<string>()
         }
     });
 });
+#endregion
 
 
-// 💾 SQL Server & EF Core
+#region Database & MongoDB
+// Cấu hình Entity Framework với SQL Server
 builder.Services.AddDbContext<WebDBContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// 🔐 Identity (dành cho quản lý người dùng và vai trò nếu dùng thêm)
-// Configure Identity
-builder.Services.AddIdentity<User, Role>(options =>
+// Cấu hình MongoDB và inject MongoDbContext vào DI container
+var mongoConfig = builder.Configuration.GetSection("MongoDbSettings").Get<MongoDbSettings>();
+builder.Services.AddSingleton(sp =>
+    new MongoDbContext(mongoConfig.ConnectionString, mongoConfig.DatabaseName));
+#endregion
+
+#region Redis
+// Cấu hình Redis nếu có ConnectionString
+var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
+if (!string.IsNullOrEmpty(redisConnectionString))
 {
-    options.Password.RequireDigit = true;
-    options.Password.RequireLowercase = true;
-    options.Password.RequireUppercase = true;
-    options.Password.RequireNonAlphanumeric = true;
-    options.Password.RequiredLength = 6;
-})
-.AddEntityFrameworkStores<WebDBContext>()
-.AddDefaultTokenProviders();
+    // Kết nối Redis thông qua StackExchange.Redis
+    builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+        ConnectionMultiplexer.Connect(redisConnectionString));
 
-// 📦 MongoDB
-var mongoConn = builder.Configuration["MongoDbSettings:ConnectionString"];
-var dbName = builder.Configuration["MongoDbSettings:DatabaseName"];
-builder.Services.AddSingleton(sp => new MongoDbContext(mongoConn, dbName));
+    // Thiết lập caching sử dụng Redis
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = redisConnectionString;
+    });
+}
+#endregion
 
-
-// 🧠 Redis
-builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
-    ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis")));
-
-// 🔔 SignalR
+#region SignalR
+// Kích hoạt dịch vụ SignalR cho thông báo realtime
 builder.Services.AddSignalR();
+#endregion
 
+<<<<<<< HEAD
 // 🚫 Rate Limiting
+=======
+#region Rate Limiting
+// Cấu hình giới hạn tần suất gọi API theo IP
+>>>>>>> 03e9f1b758cb92bc75a6b3a01f672e98754cefe5
 builder.Services.AddMemoryCache();
 builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
 builder.Services.AddInMemoryRateLimiting();
 builder.Services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
 builder.Services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
 builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
+<<<<<<< HEAD
+=======
+#endregion
+>>>>>>> 03e9f1b758cb92bc75a6b3a01f672e98754cefe5
 
-
-builder.Services.AddControllers();
-
-//builder.Services.AddControllers(options =>
-//{
-//    var policy = new AuthorizationPolicyBuilder()
-//        .RequireAuthenticatedUser()
-//        .Build();
-//    options.Filters.Add(new AuthorizeFilter(policy));
-//});
-
-
-// 🔑 Authentication - JWT Bearer
+#region Authentication - JWT
+// Cấu hình xác thực JWT
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer("Bearer", options =>
     {
@@ -125,19 +127,29 @@ builder.Services.AddAuthentication("Bearer")
                 Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])
             )
         };
+
+        // Xử lý token thủ công - KHÔNG gắn "Bearer"
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var rawToken = context.Request.Headers["Authorization"].FirstOrDefault();
+
+                if (!string.IsNullOrEmpty(rawToken) && !rawToken.StartsWith("Bearer "))
+                {
+                    // Set lại token trực tiếp (không cần chữ "Bearer ")
+                    context.Token = rawToken;
+                }
+
+                return Task.CompletedTask;
+            }
+        };
     });
 
-// 🧩 Authorization (role-based đã tích hợp sẵn trong [Authorize(Roles = "...")])
+#endregion
 
-// 💉 DI Repositories / Services
-builder.Services.AddScoped<DataSyncService>();
-builder.Services.AddScoped<UserRepository>(); // cần cho AuthController
-builder.Services.AddStackExchangeRedisCache(options =>
-{
-    options.Configuration = builder.Configuration.GetSection("Redis:ConnectionString").Value;
-});
-
-// Cấu hình CORS để cho phép MVC gọi API
+#region CORS
+// Cho phép truy cập từ các ứng dụng MVC/Web khác (frontend)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowMvcApp", builder =>
@@ -145,39 +157,71 @@ builder.Services.AddCors(options =>
         builder.WithOrigins("https://localhost:7068", "http://localhost:5088")
                .AllowAnyMethod()
                .AllowAnyHeader()
-               .AllowCredentials();
+               .AllowCredentials(); // Cho phép gửi cookie/token
     });
 });
+#endregion
 
-// Mongo
-var mongoConfig = builder.Configuration.GetSection("MongoDbSettings").Get<MongoDbSettings>();
-builder.Services.AddSingleton(sp =>
-    new MongoDbContext(mongoConfig.ConnectionString, mongoConfig.DatabaseName));
+#region Dependency Injection
+// Đăng ký các dịch vụ và repository sử dụng DI
+builder.Services.AddScoped<DataSyncService>();
+builder.Services.AddScoped<UserRepository>();
 
-// 🚀 Build app
+// Kích hoạt API Controller
+builder.Services.AddControllers();
+#endregion
+
+// Tạo app từ builder đã cấu hình
 var app = builder.Build();
 
-// 📘 Swagger UI
+#region Middleware
 if (app.Environment.IsDevelopment())
 {
+    // Hiển thị lỗi và Swagger khi ở môi trường dev
+    app.UseDeveloperExceptionPage();
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-// Khởi tạo vai trò
+else
+{
+    // Middleware xử lý lỗi khi ở môi trường production
+    app.UseExceptionHandler("/error");
+    app.UseHsts();
+}
+
+// Các middleware cần thiết cho API
+app.UseHttpsRedirection();
+app.UseCors("AllowMvcApp");
+app.UseIpRateLimiting();
+app.UseRouting();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Map các route API và SignalR Hub
+app.MapControllers();
+app.MapHub<NotificationHub>("/notificationHub");
+#endregion
+
+#region Khởi tạo vai trò và tài khoản admin mặc định
+// Tạo vai trò và người dùng quản trị mặc định nếu chưa có
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     try
     {
         await RoleInitializer.InitializeAsync(services);
+        await AdminInitializer.SeedAdminAsync(services);
     }
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "Có lỗi xảy ra khi khởi tạo vai trò trong cơ sở dữ liệu.");
+        logger.LogError(ex, "Có lỗi xảy ra khi khởi tạo vai trò.");
     }
 }
+#endregion
 
+<<<<<<< HEAD
 // 🛡️ Middlewares
 app.UseHttpsRedirection();
 app.UseCors("AllowMvcApp");
@@ -190,4 +234,7 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHub<NotificationHub>("/notificationHub");
 
+=======
+// Chạy ứng dụng
+>>>>>>> 03e9f1b758cb92bc75a6b3a01f672e98754cefe5
 app.Run();

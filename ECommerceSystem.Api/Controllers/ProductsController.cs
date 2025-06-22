@@ -103,7 +103,7 @@ namespace ECommerceSystem.Api.Controllers
 
         // Thêm sản phẩm mới
         [HttpPost]
-        //[Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AddProduct([FromBody] ProductDTO model)
         {
             if (!ModelState.IsValid)
@@ -133,7 +133,7 @@ namespace ECommerceSystem.Api.Controllers
 
         // Sửa sản phẩm
         [HttpPut("{id}")]
-        //[Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> EditProduct(int id, [FromBody] ProductDTO model)
         {
             if (!ModelState.IsValid)
@@ -162,7 +162,7 @@ namespace ECommerceSystem.Api.Controllers
 
         // Xóa sản phẩm (mềm)
         [HttpDelete("{id}")]
-        //[Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteProduct(int id)
         {
             var product = await _dbContext.Products.FindAsync(id);
