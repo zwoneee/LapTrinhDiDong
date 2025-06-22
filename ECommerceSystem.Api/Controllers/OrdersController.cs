@@ -1,13 +1,14 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using ECommerceSystem.Api.Data;
+﻿using ECommerceSystem.Api.Data;
+using ECommerceSystem.Api.Hubs;
 using ECommerceSystem.Shared.Constants;
 using ECommerceSystem.Shared.DTOs;
+using ECommerceSystem.Shared.DTOs.Product;
 using ECommerceSystem.Shared.Entities;
 using ECommerceSystem.Shared.Utilities;
-using ECommerceSystem.Api.Hubs;
-using ECommerceSystem.Shared.DTOs.Product;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using System;
 
 namespace ECommerceSystem.Api.Controllers
@@ -75,5 +76,33 @@ namespace ECommerceSystem.Api.Controllers
                 }).ToList()
             });
         }
+        [HttpGet("user/{userId}")]
+        public async Task<IActionResult> GetOrdersByUser(int userId)
+        {
+            var orders = await _dbContext.Orders
+                .Include(o => o.OrderItems)
+                .Where(o => o.UserId == userId)
+                .OrderByDescending(o => o.CreatedAt)
+                .ToListAsync();
+
+            var result = orders.Select(o => new OrderDTO
+            {
+                Id = o.Id,
+                UserId = o.UserId,
+                Total = o.Total,
+                Status = o.Status,
+                DeliveryLocation = o.DeliveryLocation,
+                QrCode = o.QrCode,
+                Items = o.OrderItems.Select(i => new OrderItemDTO
+                {
+                    ProductId = i.ProductId,
+                    Quantity = i.Quantity,
+                    Price = i.Price
+                }).ToList()
+            }).ToList();
+
+            return Ok(result);
+        }
+
     }
 }

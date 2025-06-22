@@ -1,6 +1,7 @@
 ﻿@{
     Layout = "_AdminLayout";
     ViewData["Title"] = "Hoạt động người dùng";
+    var activities = ViewBag.Activities as List<object>;
 }
 
 <h2 class="mb-4">Thống kê hoạt động người dùng</h2>
@@ -16,38 +17,24 @@
                 </tr>
             </thead>
             <tbody>
-                <!-- Dữ liệu sẽ được nạp bằng JavaScript -->
+                @if (activities != null && activities.Count > 0)
+                {
+                    foreach (var act in activities)
+                    {
+                        dynamic a = act;
+                        <tr>
+                            <td>@a.Action</td>
+                            <td>@a.Count</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="2" class="text-center text-muted">Không có dữ liệu</td>
+                    </tr>
+                }
             </tbody>
         </table>
     </div>
 </div>
-
-@section Scripts {
-    <script>
-        async function loadUserActivity() {
-            try {
-                const response = await fetch("/api/admin/user-activity");
-                if (!response.ok) throw new Error("Lỗi khi gọi API");
-
-                const data = await response.json();
-                const table = document.querySelector("#activityTable tbody");
-                table.innerHTML = "";
-
-                if (data.activities && data.activities.length > 0) {
-                    data.activities.forEach(item => {
-                        const row = `<tr><td>${item.action}</td><td>${item.count}</td></tr>`;
-                        table.innerHTML += row;
-                    });
-                } else {
-                    table.innerHTML = `<tr><td colspan='2' class='text-center text-muted'>Không có dữ liệu</td></tr>`;
-                }
-
-            } catch (error) {
-                console.error("Lỗi tải hoạt động:", error);
-                alert("Không thể tải dữ liệu hoạt động người dùng.");
-            }
-        }
-
-        document.addEventListener("DOMContentLoaded", loadUserActivity);
-    </script>
-}
