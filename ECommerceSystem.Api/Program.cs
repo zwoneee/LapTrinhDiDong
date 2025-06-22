@@ -1,4 +1,4 @@
-﻿
+﻿using AspNetCoreRateLimit;
 using ECommerceSystem.Api.Data;
 using ECommerceSystem.Api.Data.Mongo;
 using ECommerceSystem.Api.Data.Repositories;
@@ -92,12 +92,12 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 builder.Services.AddSignalR();
 
 // 🚫 Rate Limiting
-//builder.Services.AddMemoryCache();
-//builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
-//builder.Services.AddInMemoryRateLimiting();
-//builder.Services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
-//builder.Services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
-//builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
+builder.Services.AddMemoryCache();
+builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
+builder.Services.AddInMemoryRateLimiting();
+builder.Services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
+builder.Services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
+builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 
 
 builder.Services.AddControllers();
@@ -181,7 +181,7 @@ using (var scope = app.Services.CreateScope())
 // 🛡️ Middlewares
 app.UseHttpsRedirection();
 app.UseCors("AllowMvcApp");
-//app.UseIpRateLimiting();
+app.UseIpRateLimiting();
 app.UseRouting();
 
 app.UseAuthentication(); // BẮT BUỘC đặt trước UseAuthorization

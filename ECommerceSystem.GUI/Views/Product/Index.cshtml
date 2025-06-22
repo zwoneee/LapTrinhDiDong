@@ -1,6 +1,11 @@
 ﻿@model IEnumerable<ECommerceSystem.Shared.DTOs.Product.ProductDTO>
+
 @{
     ViewData["Title"] = "Quản lý sản phẩm";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+
+    // Ép kiểu an toàn, tránh null
+    var categories = ViewBag.Categories as List<ECommerceSystem.Shared.DTOs.Category.CategoryDTO> ?? new();
 }
 
 <h2>Quản lý sản phẩm</h2>
@@ -32,7 +37,7 @@
         <div class="col-md-4">
             <select name="categoryId" class="form-control">
                 <option value="">Tất cả danh mục</option>
-                @foreach (var category in ViewBag.Categories)
+                @foreach (var category in categories)
                 {
                     <option value="@category.Id" selected="@(ViewBag.CategoryId == category.Id ? "selected" : null)">@category.Name</option>
                 }
@@ -57,17 +62,12 @@
     <tbody>
         @foreach (var item in Model)
         {
+            var matchedCategory = categories.FirstOrDefault(c => c.Id == item.CategoryId);
+
             <tr>
                 <td>@item.Name</td>
                 <td>@item.Price.ToString("N0")</td>
-                <td>
-                    @{
-                        var categories = (IEnumerable<dynamic>)ViewBag.Categories;
-                        var category = categories.FirstOrDefault(c => c.Id == item.CategoryId);
-
-                        @((category != null ? category.Name : "Không có danh mục"))
-                    }
-                </td>
+                <td>@(matchedCategory?.Name ?? "Không có danh mục")</td>
                 <td>@(item.IsPromoted ? "✔️" : "❌")</td>
                 <td>
                     <a class="btn btn-sm btn-primary" asp-action="Edit" asp-route-id="@item.Id"><i class="bi bi-pencil"></i> Sửa</a>

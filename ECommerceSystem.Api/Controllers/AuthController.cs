@@ -36,12 +36,16 @@ namespace ECommerceSystem.Api.Controllers
 
             var (userDto, role) = await _userRepo.GetUserInfoAndRole(user.UserName);
 
+            // Fix for CS1061: 'string' does not contain a definition for 'Name'
+            // The issue is that 'role' is a string, not an object with a 'Name' property.
+            // Update the code to use 'role' directly as it is already a string.
+
             var claims = new[]
             {
                 new Claim(ClaimTypes.Name, user.UserName),
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Role, role)
+                new Claim(ClaimTypes.Role, role) // Use 'role' directly as it is a string
             };
 
             // ✅ Tạo khóa bí mật

@@ -661,8 +661,9 @@
 
     </style>
 </head>
+
 <body>
-    <!-- Sidebar -->
+   <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <div class="logo">
@@ -700,7 +701,13 @@
             <div class="nav-section">
                 <div class="nav-section-title">Quản lý</div>
                 <div class="nav-item">
-                    <a href="#" class="nav-link" data-page="products">
+                    <a href="/Product/Create" class="nav-link" data-page="products-create">
+                        <i class="nav-icon fas fa-plus"></i>
+                        <span>Thêm sản phẩm</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="/Product/Index" class="nav-link" data-page="products">
                         <i class="nav-icon fas fa-box"></i>
                         <span>Sản phẩm</span>
                     </a>
@@ -752,8 +759,6 @@
                         </button>
                     </form>
                 </div>
-
-
             </div>
         </nav>
     </aside>
@@ -767,7 +772,7 @@
     </div>
 
     <script>
-        $(document).ready(function () {
+                $(document).ready(function () {
             $('.nav-link').click(function (e) {
                 e.preventDefault();
                 const url = $(this).attr('href');
@@ -786,5 +791,7 @@
             });
         });
     </script>
+    @RenderSection("Scripts", required: false)
+
 </body>
 </html>

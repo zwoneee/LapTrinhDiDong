@@ -6,7 +6,10 @@ using System.Threading.Tasks;
 
 namespace ECommerceSystem.GUI.Controllers
 {
-    [Authorize] // Yêu cầu JWT cho tất cả action
+    //[Authorize] // Yêu cầu JWT cho tất cả action
+    [Route("api/public/categories")]
+    [ApiController]
+    [Authorize(Roles = "Admin")]
     public class CategoryController : Controller
     {
         private readonly ICategoryApi _categoryApi;
