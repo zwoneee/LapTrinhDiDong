@@ -1,0 +1,56 @@
+﻿@model ECommerceSystem.Shared.DTOs.Product.CartDTO
+
+@{
+    ViewData["Title"] = "Giỏ hàng của bạn";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+}
+
+@if (Model.Items.Count == 0)
+{
+    <div class="alert alert-info">Giỏ hàng của bạn đang trống.</div>
+}
+else
+{
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Sản phẩm</th>
+                <th>Số lượng</th>
+                <th>Giá</th>
+                <th>Thành tiền</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.Items)
+            {
+                <tr>
+                    <td>@item.Name</td>
+                    <td>@item.Quantity</td>
+                    <td>@item.Price.ToString("N0")</td>
+                    <td>@(item.Price* item.Quantity).ToString("N0")</td>
+                    <td>
+                        <form asp-action="DeleteItem" method="post">
+                            <input type="hidden" name="productId" value="@item.ProductId" />
+                            <button type="submit" class="btn btn-danger btn-sm">Xoá</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <h4>Tổng tiền: <strong>@Model.Total.ToString("N0") đ</strong></h4>
+
+    <a href="/Cart/Checkout" class="btn btn-success">Thanh toán</a>
+}

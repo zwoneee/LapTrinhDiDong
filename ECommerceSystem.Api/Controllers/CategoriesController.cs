@@ -8,8 +8,8 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace ECommerceSystem.Api.Controllers
 {
-    [Authorize(Roles = "Admin")]
-    //[AllowAnonymous]
+    //[Authorize(Roles = "Admin")]
+    [AllowAnonymous]
     [Route("api/public/categories")]
     [ApiController]
     public class CategoriesController : ControllerBase

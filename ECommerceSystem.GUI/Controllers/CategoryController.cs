@@ -6,7 +6,10 @@ using System.Threading.Tasks;
 
 namespace ECommerceSystem.GUI.Controllers
 {
-    [Authorize] // Yêu cầu JWT cho tất cả action
+    //[Authorize] // Yêu cầu JWT cho tất cả action
+   
+    
+    [Authorize]
     public class CategoryController : Controller
     {
         private readonly ICategoryApi _categoryApi;
@@ -71,5 +74,21 @@ namespace ECommerceSystem.GUI.Controllers
                 return RedirectToAction("Index");
             }
         }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteAll()
+        {
+            try
+            {
+                await _categoryApi.DeleteAllAsync();
+                return RedirectToAction("Index");
+            }
+            catch
+            {
+                TempData["Error"] = "Lỗi khi xóa tất cả danh mục.";
+                return RedirectToAction("Index");
+            }
+        }
+
     }
 }

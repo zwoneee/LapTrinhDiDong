@@ -1,15 +1,18 @@
 ﻿using ECommerceSystem.GUI.Apis;
+using ECommerceSystem.Shared.DTOs.Category;
 using ECommerceSystem.Shared.DTOs.Product;
+using ECommerceSystem.Shared.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Memory;
+using System;
+using System.Reflection;
+using System.Threading.Tasks;
 
 namespace ECommerceSystem.GUI.Controllers
 {
-    [Authorize(Roles = "Admin")]
-    [Route("[controller]/[action]")]
+    //[Authorize(Roles = "Admin")]
+   // [Route("[controller]/[action]")]
     public class ProductController : Controller
     {
         private readonly IProductApi _productApi;
@@ -34,22 +37,33 @@ namespace ECommerceSystem.GUI.Controllers
             }
             return categories;
         }
-
+       
         public async Task<IActionResult> Index(string searchTerm, int? categoryId, int page = 1, int pageSize = 10)
         {
             try
             {
                 var productsResponse = await _productApi.GetProductsAsync(searchTerm, categoryId, null, null, null, null, page, pageSize);
-                ViewBag.Categories = await GetCachedCategoriesAsync();
+
+                // Bảo vệ: nếu response hoặc products null, tạo danh sách rỗng
+                var products = productsResponse?.Products ?? new List<ProductDTO>();
+
+                // Cache danh mục an toàn
+                var cachedCategories = await GetCachedCategoriesAsync() ?? new List<CategoryDTO>();
+                ViewBag.Categories = cachedCategories;
+
                 ViewBag.SearchTerm = searchTerm;
                 ViewBag.CategoryId = categoryId;
                 ViewBag.CurrentPage = page;
-                ViewBag.TotalPages = (int)Math.Ceiling(productsResponse.Total / (double)pageSize);
-                return View(productsResponse.Products);
+                ViewBag.TotalPages = (int)Math.Ceiling((productsResponse?.Total ?? 0) / (double)pageSize);
+
+                return View(products);
             }
             catch (Exception ex)
             {
                 TempData["Error"] = $"Lỗi khi tải danh sách sản phẩm: {ex.Message}";
+                ViewBag.Categories = new List<CategoryDTO>(); // tránh lỗi null
+                ViewBag.CurrentPage = 1;
+                ViewBag.TotalPages = 1;
                 return View(new List<ProductDTO>());
             }
         }

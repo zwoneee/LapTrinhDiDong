@@ -1,4 +1,6 @@
 ﻿using ECommerceSystem.GUI.Apis;
+using ECommerceSystem.GUI.Controllers;
+
 // Nếu AuthRetryHandler nằm trong namespace này
 using ECommerceSystem.GUI.Services;
 using ECommerceSystem.GUI.Services.ECommerceSystem.GUI.Handlers;
@@ -96,6 +98,15 @@ static void ConfigureRefit(IServiceCollection services)
     services.AddRefitClient<IProductApi>()
        .AddHttpMessageHandler<AuthRetryHandler>()
        .ConfigureHttpClient(SetHttpClient);
+    services.AddRefitClient<ICartApi>()
+       .AddHttpMessageHandler<AuthRetryHandler>()
+       .ConfigureHttpClient(SetHttpClient);
+    services.AddRefitClient<IUserApi>()
+       .AddHttpMessageHandler<AuthRetryHandler>()
+       .ConfigureHttpClient(SetHttpClient);
+    services.AddRefitClient<IAdminApi>()
+      .AddHttpMessageHandler<AuthRetryHandler>()
+      .ConfigureHttpClient(SetHttpClient);
 
     //services.AddRefitClient<IAuthApi>()
     //   .AddHttpMessageHandler<AuthRetryHandler>()

@@ -1,4 +1,5 @@
-﻿using ECommerceSystem.Api.Data;
+﻿// API: AdminController.cs
+using ECommerceSystem.Api.Data;
 using ECommerceSystem.Api.Data.Mongo;
 using ECommerceSystem.Shared.DTOs;
 using ECommerceSystem.Shared.DTOs.Product;
@@ -27,31 +28,42 @@ namespace ECommerceSystem.Api.Controllers
         }
 
         [HttpGet("statistics")]
-        public async Task<IActionResult> GetStatistics(string type, string period)
+        public async Task<IActionResult> GetStatistics(string type, string? period = "")
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(type))
+                    return BadRequest(new { Error = "Tham số 'type' là bắt buộc." });
+
+                type = type.ToLowerInvariant();
+                period = period?.ToLowerInvariant();
+
                 var result = new StatisticDTO();
 
-                switch (type?.ToLower())
+                switch (type)
                 {
                     case "revenue":
                         var query = _dbContext.Orders
                             .Where(o => o.Status != "Cancelled" && !o.IsDeleted);
-                        var grouped = period.ToLower() == "day" ? query.GroupBy(o => o.CreatedAt.Date) :
-                                      period.ToLower() == "month" ? query.GroupBy(o => new DateTime(o.CreatedAt.Year, o.CreatedAt.Month, 1)) :
-                                      period.ToLower() == "year" ? query.GroupBy(o => new DateTime(o.CreatedAt.Year, 1, 1)) :
-                                      query.GroupBy(o => o.CreatedAt.Date);
+
+                        var grouped = (period ?? "day") switch
+                        {
+                            "day" => query.GroupBy(o => o.CreatedAt.Date),
+                            "month" => query.GroupBy(o => new DateTime(o.CreatedAt.Year, o.CreatedAt.Month, 1)),
+                            "year" => query.GroupBy(o => new DateTime(o.CreatedAt.Year, 1, 1)),
+                            _ => query.GroupBy(o => o.CreatedAt.Date)
+                        };
+
                         result.Revenue = await grouped
                             .Select(g => new { Date = g.Key, Value = g.Sum(o => o.Total) } as object)
-                            .ToListAsync() ?? new List<object>();
+                            .ToListAsync();
                         break;
 
                     case "orders":
                         result.OrderCount = await _dbContext.Orders
                             .GroupBy(o => o.Status)
                             .Select(g => new { Status = g.Key, Count = g.Count() })
-                            .ToDictionaryAsync(g => g.Status, g => g.Count) ?? new Dictionary<string, int>();
+                            .ToDictionaryAsync(g => g.Status, g => g.Count);
                         break;
 
                     case "top-products":
@@ -61,21 +73,37 @@ namespace ECommerceSystem.Api.Controllers
                             .OrderByDescending(g => g.Quantity)
                             .Take(5)
                             .ToListAsync();
-                        result.TopProducts = orderItems.Any()
-                            ? orderItems.Join(_dbContext.Products,
-                                oi => oi.ProductId,
-                                p => p.Id,
-                                (oi, p) => new { p.Id, p.Name, oi.Quantity } as object)
-                            .ToList()
-                            : new List<object>();
+
+                        var productDict = await _dbContext.Products
+                            .Where(p => !p.IsDeleted)
+                            .Select(p => new { p.Id, p.Name })
+                            .ToDictionaryAsync(p => p.Id, p => p.Name);
+
+                        result.TopProducts = orderItems
+                            .Where(oi => productDict.ContainsKey(oi.ProductId))
+                            .Select(oi => new
+                            {
+                                Id = oi.ProductId,
+                                Name = productDict[oi.ProductId],
+                                Quantity = oi.Quantity
+                            } as object)
+                            .ToList();
                         break;
+
+                    default:
+                        return BadRequest(new { Error = "Tham số 'type' không hợp lệ." });
                 }
 
                 return Ok(result);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { Error = ex.Message });
+                return StatusCode(500, new
+                {
+                    Error = ex.Message,
+                    Detail = ex.InnerException?.Message,
+                    Stack = ex.StackTrace
+                });
             }
         }
 
@@ -87,7 +115,8 @@ namespace ECommerceSystem.Api.Controllers
                 var lowStockProducts = await _dbContext.Products
                     .Where(p => p.Stock > 0 && p.Stock <= 10 && !p.IsDeleted)
                     .Select(p => new { p.Id, p.Name, p.Stock } as object)
-                    .ToListAsync() ?? new List<object>();
+                    .ToListAsync();
+
                 return Ok(new { LowStock = lowStockProducts });
             }
             catch (Exception ex)
@@ -105,7 +134,7 @@ namespace ECommerceSystem.Api.Controllers
                 var activities = logs
                     .GroupBy(l => l.Endpoint)
                     .Select(g => new { Action = g.Key, Count = g.Count() } as object)
-                    .ToList() ?? new List<object>();
+                    .ToList();
 
                 return Ok(new { Activities = activities });
             }

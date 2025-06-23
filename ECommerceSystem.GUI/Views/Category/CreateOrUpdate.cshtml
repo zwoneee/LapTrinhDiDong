@@ -3,6 +3,7 @@
 @{
     var isEdit = ViewBag.IsEdit as bool? ?? false;
     ViewData["Title"] = isEdit ? "Sửa danh mục" : "Thêm danh mục";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
 }
 
 <h2>@ViewData["Title"]</h2>

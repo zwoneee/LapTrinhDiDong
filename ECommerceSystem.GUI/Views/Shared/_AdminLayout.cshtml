@@ -661,8 +661,9 @@
 
     </style>
 </head>
+
 <body>
-    <!-- Sidebar -->
+   <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <div class="logo">
@@ -683,24 +684,50 @@
                         <span>Trang chủ</span>
                     </a>
                 </div>
+                <a href="/Admin" class="nav-link">Trang quản trị</a>
+
                 <div class="nav-item">
-                    <a href="/Admin/Dashboard" class="nav-link active" data-page="dashboard">
+                    <a href="/Admin/Dashboard" class="nav-link" data-page="dashboard">
                         <i class="nav-icon fas fa-tachometer-alt"></i>
                         <span>Dashboard</span>
                     </a>
                 </div>
+
                 <div class="nav-item">
-                    <a href="#" class="nav-link" data-page="analytics">
-                        <i class="nav-icon fas fa-chart-bar"></i>
-                        <span>Thống kê</span>
+                    <a href="/Admin/UserActivity" class="nav-link" data-page="user-activity">
+                        <i class="nav-icon fas fa-user-clock"></i>
+                        <span>Hoạt động người dùng</span>
                     </a>
                 </div>
+
             </div>
 
             <div class="nav-section">
                 <div class="nav-section-title">Quản lý</div>
+                <!-- Giỏ hàng -->
                 <div class="nav-item">
-                    <a href="#" class="nav-link" data-page="products">
+                    <a href="/Cart/Index" class="nav-link" data-page="cart">
+                        <i class="nav-icon fas fa-shopping-basket"></i>
+                        <span>Giỏ hàng</span>
+                    </a>
+                </div>
+
+                <!-- Thanh toán -->
+                <div class="nav-item">
+                    <a href="/Cart/Checkout" class="nav-link" data-page="checkout">
+                        <i class="nav-icon fas fa-cash-register"></i>
+                        <span>Thanh toán</span>
+                    </a>
+                </div>
+
+                <div class="nav-item">
+                    <a href="/Product/Create" class="nav-link" data-page="products-create">
+                        <i class="nav-icon fas fa-plus"></i>
+                        <span>Thêm sản phẩm</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="/Product/Index" class="nav-link" data-page="products">
                         <i class="nav-icon fas fa-box"></i>
                         <span>Sản phẩm</span>
                     </a>
@@ -712,17 +739,19 @@
                     </a>
                 </div>
                 <div class="nav-item">
-                    <a href="#" class="nav-link" data-page="customers">
-                        <i class="nav-icon fas fa-users"></i>
-                        <span>Khách hàng</span>
+                    <a href="/User/Index" class="nav-link" data-page="users">
+                        <i class="nav-icon fas fa-user-shield"></i>
+                        <span>Người dùng</span>
                     </a>
                 </div>
+
                 <div class="nav-item">
-                    <a href="#" class="nav-link" data-page="categories">
+                    <a href="/Category/Index" class="nav-link" data-page="categories">
                         <i class="nav-icon fas fa-tags"></i>
                         <span>Danh mục</span>
                     </a>
                 </div>
+
             </div>
 
             <div class="nav-section">
@@ -752,8 +781,6 @@
                         </button>
                     </form>
                 </div>
-
-
             </div>
         </nav>
     </aside>
@@ -767,7 +794,7 @@
     </div>
 
     <script>
-        $(document).ready(function () {
+                $(document).ready(function () {
             $('.nav-link').click(function (e) {
                 e.preventDefault();
                 const url = $(this).attr('href');
@@ -786,5 +813,7 @@
             });
         });
     </script>
+    @RenderSection("Scripts", required: false)
+
 </body>
 </html>
