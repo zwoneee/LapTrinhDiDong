@@ -9,18 +9,22 @@ public class AdminOrdersController : ControllerBase
 {
     private readonly WebDBContext _context;
 
+    // Inject DbContext thông qua constructor
     public AdminOrdersController(WebDBContext context)
     {
         _context = context;
     }
 
+    // [GET] /api/admin/orders
+    // Lấy toàn bộ danh sách đơn hàng (bao gồm các mặt hàng)
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
         var orders = await _context.Orders
-            .Include(o => o.OrderItems)
+            .Include(o => o.OrderItems) // Gồm cả thông tin sản phẩm trong đơn hàng
             .ToListAsync();
 
+        // Chuyển về DTO để trả về frontend
         var result = orders.Select(o => new OrderDTO
         {
             Id = o.Id,
@@ -39,6 +43,8 @@ public class AdminOrdersController : ControllerBase
         return Ok(result);
     }
 
+    // [GET] /api/admin/orders/{id}
+    // Lấy chi tiết một đơn hàng cụ thể theo ID
     [HttpGet("{id}")]
     public async Task<IActionResult> Get(int id)
     {
@@ -46,7 +52,7 @@ public class AdminOrdersController : ControllerBase
             .Include(o => o.OrderItems)
             .FirstOrDefaultAsync(o => o.Id == id);
 
-        if (order == null) return NotFound();
+        if (order == null) return NotFound(); // Trả 404 nếu không tìm thấy
 
         return Ok(new OrderDTO
         {
@@ -64,15 +70,17 @@ public class AdminOrdersController : ControllerBase
         });
     }
 
+    // [POST] /api/admin/orders/{id}/update-status
+    // Cập nhật trạng thái đơn hàng (Pending, Paid, Cancelled, v.v.)
     [HttpPost("{id}/update-status")]
     public async Task<IActionResult> UpdateStatus(int id, [FromBody] string status)
     {
         var order = await _context.Orders.FindAsync(id);
-        if (order == null) return NotFound();
+        if (order == null) return NotFound(); // Trả 404 nếu không tìm thấy
 
-        order.Status = status;
+        order.Status = status; // Gán trạng thái mới
         await _context.SaveChangesAsync();
 
-        return Ok();
+        return Ok(); // Trả về 200 OK
     }
 }
