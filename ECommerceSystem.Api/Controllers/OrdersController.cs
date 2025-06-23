@@ -16,7 +16,8 @@ namespace ECommerceSystem.Api.Controllers
 {
     [Route("api/user/orders")]
     [ApiController]
-    // [Authorize] // Bật nếu cần bảo vệ bằng JWT
+    [Authorize(Roles = "Admin")]
+    [AllowAnonymous] // Cho phép truy cập công khai (GET danh mục)
     public class OrdersController : ControllerBase
     {
         private readonly WebDBContext _dbContext;

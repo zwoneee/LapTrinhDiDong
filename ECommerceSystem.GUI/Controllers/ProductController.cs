@@ -1,18 +1,15 @@
 ﻿using ECommerceSystem.GUI.Apis;
+using ECommerceSystem.GUI.Models;
 using ECommerceSystem.Shared.DTOs.Category;
 using ECommerceSystem.Shared.DTOs.Product;
-using ECommerceSystem.Shared.Entities;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using System;
-using System.Reflection;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace ECommerceSystem.GUI.Controllers
 {
-    //[Authorize(Roles = "Admin")]
-   // [Route("[controller]/[action]")]
     public class ProductController : Controller
     {
         private readonly IProductApi _productApi;
@@ -37,20 +34,16 @@ namespace ECommerceSystem.GUI.Controllers
             }
             return categories;
         }
-       
+
         public async Task<IActionResult> Index(string searchTerm, int? categoryId, int page = 1, int pageSize = 10)
         {
             try
             {
                 var productsResponse = await _productApi.GetProductsAsync(searchTerm, categoryId, null, null, null, null, page, pageSize);
-
-                // Bảo vệ: nếu response hoặc products null, tạo danh sách rỗng
                 var products = productsResponse?.Products ?? new List<ProductDTO>();
-
-                // Cache danh mục an toàn
                 var cachedCategories = await GetCachedCategoriesAsync() ?? new List<CategoryDTO>();
-                ViewBag.Categories = cachedCategories;
 
+                ViewBag.Categories = cachedCategories;
                 ViewBag.SearchTerm = searchTerm;
                 ViewBag.CategoryId = categoryId;
                 ViewBag.CurrentPage = page;
@@ -61,43 +54,58 @@ namespace ECommerceSystem.GUI.Controllers
             catch (Exception ex)
             {
                 TempData["Error"] = $"Lỗi khi tải danh sách sản phẩm: {ex.Message}";
-                ViewBag.Categories = new List<CategoryDTO>(); // tránh lỗi null
+                ViewBag.Categories = new List<CategoryDTO>();
                 ViewBag.CurrentPage = 1;
                 ViewBag.TotalPages = 1;
                 return View(new List<ProductDTO>());
             }
         }
 
+        [HttpGet]
         public async Task<IActionResult> Create()
         {
             ViewBag.Categories = await GetCachedCategoriesAsync();
-            return View(new ProductDTO());
+            return View(new ProductFormModel
+            {
+                Product = new ProductDTO()
+            });
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(ProductDTO dto)
+        public async Task<IActionResult> Create(ProductFormModel form)
         {
             if (!ModelState.IsValid)
             {
                 ViewBag.Categories = await GetCachedCategoriesAsync();
-                return View(dto);
+                return View(form);
             }
 
-            try
+            var dto = form.Product;
+
+            if (form.ThumbnailFile != null && form.ThumbnailFile.Length > 0)
             {
-                await _productApi.CreateAsync(dto);
-                TempData["Success"] = "Sản phẩm đã được tạo thành công!";
-                return RedirectToAction(nameof(Index));
+                var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+                if (!Directory.Exists(uploadsFolder))
+                    Directory.CreateDirectory(uploadsFolder);
+
+                var fileName = Guid.NewGuid().ToString() + Path.GetExtension(form.ThumbnailFile.FileName);
+                var filePath = Path.Combine(uploadsFolder, fileName);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await form.ThumbnailFile.CopyToAsync(stream);
+                }
+
+                dto.ThumbnailUrl = "/uploads/" + fileName;
             }
-            catch (Exception ex)
-            {
-                TempData["Error"] = $"Lỗi khi tạo sản phẩm: {ex.Message}";
-                ViewBag.Categories = await GetCachedCategoriesAsync();
-                return View(dto);
-            }
+
+            await _productApi.CreateAsync(dto);
+            TempData["Success"] = "Sản phẩm đã được tạo thành công!";
+            return RedirectToAction(nameof(Index));
         }
 
+        [HttpGet]
         public async Task<IActionResult> Edit(int id)
         {
             try

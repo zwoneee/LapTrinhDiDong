@@ -1,9 +1,15 @@
+<<<<<<< HEAD
 ﻿@model List<ECommerceSystem.Shared.DTOs.Product.ProductDTO>
 @{
     ViewData["Title"] = "Trang chủ";
     var categories = ViewBag.Categories as List<ECommerceSystem.Shared.DTOs.Category.CategoryDTO>;
     int currentPage = ViewBag.CurrentPage ?? 1;
     int totalPages = ViewBag.TotalPages ?? 1;
+=======
+﻿@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Home Page";
+>>>>>>> db26dd9e3bfd0d9c83f1d627dbd48ed4006df78f
 }
 <style>
     .hero-section {
@@ -14,6 +20,7 @@
         border-radius: 0 0 50px 50px;
     }
 
+<<<<<<< HEAD
     .hero-content h1 {
         font-size: 3rem;
         font-weight: 700;
@@ -444,11 +451,48 @@
                     </nav>
                 }
 
+=======
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <!-- Welcome Section -->
+        <div class="col-lg-6 col-md-10 mb-4">
+            <div class="card shadow-lg border-0 animate__animated animate__fadeIn">
+                <div class="card-body text-center p-5">
+                    <h2 class="card-title mb-3 text-primary">Chào mừng, <span id="adminName">Admin</span>!</h2>
+                    <p class="card-text text-muted mb-2">Ngày giờ hiện tại: <span id="currentDateTime"></span></p>
+                    <p class="card-text text-muted mb-4">Vui lòng chọn một mục trong menu bên trái để bắt đầu quản lý hệ thống.</p>
+                    <a href="/Product" class="btn btn-primary btn-lg">Khám phá ngay</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Todo List Section -->
+        <div class="col-lg-6 col-md-10 mb-4">
+            <div class="card shadow-lg border-0 animate__animated animate__fadeIn">
+                <div class="card-body p-4">
+                    <h4 class="card-title mb-3 text-primary">Danh sách công việc</h4>
+                    <div class="input-group mb-3">
+                        <input type="text" id="todoInput" class="form-control" placeholder="Thêm công việc mới..." aria-label="Thêm công việc">
+                        <button class="btn btn-primary" type="button" id="addTodo">Thêm</button>
+                    </div>
+                    <ul id="todoList" class="list-group">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Kiểm tra báo cáo hàng ngày
+                            <span class="text-danger delete-btn" style="cursor:pointer;">✖</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Cập nhật danh sách sản phẩm
+                            <span class="text-danger delete-btn" style="cursor:pointer;">✖</span>
+                        </li>
+                    </ul>
+                </div>
+>>>>>>> db26dd9e3bfd0d9c83f1d627dbd48ed4006df78f
             </div>
         </div>
     </div>
 </div>
 
+<<<<<<< HEAD
 <!-- Script giữ nguyên -->
 <script>
     // ... (giữ nguyên quickView, ripple animation, scroll effect)
@@ -472,3 +516,34 @@
         color: #ccc;
     }
 </style>
+=======
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+            integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+            crossorigin="anonymous"></script>
+    <script src="~/js/admin-home.js"></script>
+    <script>
+        // Display current date and time synchronized with system
+        function updateDateTime() {
+            const now = new Date();
+            const options = {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                timeZone: 'Asia/Ho_Chi_Minh'
+            };
+            const formattedDateTime = now.toLocaleString('vi-VN', options);
+            $('#currentDateTime').text(formattedDateTime);
+        }
+
+        $(document).ready(function() {
+            updateDateTime();
+            setInterval(updateDateTime, 1000); // Update every second
+        });
+    </script>
+}
+>>>>>>> db26dd9e3bfd0d9c83f1d627dbd48ed4006df78f

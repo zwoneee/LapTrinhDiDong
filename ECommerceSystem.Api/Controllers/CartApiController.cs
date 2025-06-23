@@ -9,6 +9,8 @@ namespace ECommerceSystem.Api.Controllers
 {
     [ApiController]
     [Route("api/user/cart")]
+    [Authorize(Roles = "Admin")]
+    [AllowAnonymous] // Cho phép truy cập công khai (GET danh mục)
     //[Authorize] // Mở dòng này nếu bạn dùng xác thực JWT
     public class CartApiController : ControllerBase
     {

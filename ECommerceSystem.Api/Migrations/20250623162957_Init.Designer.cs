@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ECommerceSystem.Api.Migrations
 {
     [DbContext(typeof(WebDBContext))]
-    [Migration("20250623062940_Init")]
+    [Migration("20250623162957_Init")]
     partial class Init
     {
         /// <inheritdoc />
@@ -191,6 +191,7 @@ namespace ECommerceSystem.Api.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("TotalAmount")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("UserId")
