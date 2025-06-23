@@ -291,12 +291,9 @@
             animation: spin 1s linear infinite;
         }
 
-<<<<<<< HEAD
+        <<<<<<< HEAD
 
-=======
-       
->>>>>>> 4273d6e7db21b69a39d2d2c97c21c7d6d841d88f
-
+                ======= > > > > > > > 4273d6e7db21b69a39d2d2c97c21c7d6d841d88f
         /* Main Content */
         .main-content {
             min-height: calc(100vh - 200px);
@@ -359,15 +356,11 @@
             border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-<<<<<<< HEAD
+        <<<<<<< HEAD
 
 
 
-=======
-     
-       
-       
->>>>>>> 4273d6e7db21b69a39d2d2c97c21c7d6d841d88f
+                ======= > > > > > > > 4273d6e7db21b69a39d2d2c97c21c7d6d841d88f
         /* Utility Classes */
         .btn-modern {
             background: var(--primary-color);
@@ -380,269 +373,114 @@
             cursor: pointer;
         }
 
-            .btn-modern:hover {
-                background: #1d4ed8;
-                transform: translateY(-1px);
-                box-shadow: var(--shadow);
-            }
+        .btn-modern:hover {
+            background: #1d4ed8;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow);
+        }
     </style>
 </head>
 <body>
     <div class="header-container">
-        <!-- Top announcement bar -->
         <div class="top-announcement">
-            <div class="container">
-                <span><i class="fas fa-shipping-fast me-2"></i>Miễn phí vận chuyển cho đơn hàng trên 500k</span>
+            <div class="container text-white text-center py-2 bg-primary">
+                <i class="fas fa-shipping-fast me-2"></i>Miễn phí vận chuyển cho đơn hàng trên 500k
             </div>
         </div>
-
-        <!-- Main header -->
         <div class="main-header">
             <div class="container">
-                <div class="d-flex align-items-center justify-content-between">
-                    <!-- Logo -->
-                    <a class="logo" asp-controller="Home" asp-action="Index">
-                        <i class="fas fa-store me-2"></i>
-                        <span>ECommerce</span>
-                    </a>
-
-                    <!-- Search bar -->
-                    <div class="search-container">
+                <div class="d-flex align-items-center justify-content-between flex-wrap">
+                    <div class="d-flex align-items-center mb-2 mb-md-0">
+                        <button id="toggle-category" class="btn btn-modern me-3">
+                            <i class="fas fa-bars"></i> Danh mục
+                        </button>
+                        <a class="logo" asp-controller="Home" asp-action="Index">
+                            <i class="fas fa-store me-2"></i>
+                            <span>ECommerce</span>
+                        </a>
+                    </div>
+                    <div class="search-container flex-grow-1 mx-3">
                         <i class="fas fa-search search-icon"></i>
                         <input class="search-input" type="text" placeholder="Tìm kiếm sản phẩm, thương hiệu...">
                     </div>
-
-                    <!-- Header actions -->
-                    <div class="header-actions">
-                        <a href="#" class="header-action">
-                            <i class="fas fa-phone"></i>
-                            <span class="d-none d-md-inline">1800.2097</span>
-                        </a>
-                        <a href="#" class="header-action">
-                            <i class="fas fa-map-marker-alt"></i>
-                            <span class="d-none d-md-inline">Cửa hàng</span>
-                        </a>
-                        <a href="#" class="header-action">
-                            <i class="fas fa-truck"></i>
-                            <span class="d-none d-md-inline">Tra cứu</span>
-                        </a>
-                        <a href="#" class="header-action cart">
-                            <i class="fas fa-shopping-cart"></i>
-                            <span>Giỏ hàng</span>
-                            <span class="badge bg-danger ms-1">0</span>
-                        </a>
-                    </div>
-
-                    <!-- Authentication section -->
-                    <div class="auth-section">
-                        @if (User.Identity.IsAuthenticated)
-                        {
-                            <span class="user-greeting">
-                                <i class="fas fa-user-circle me-1"></i>
-                                Xin chào, @User.Identity.Name
-                            </span>
-                            <form asp-action="Logout" asp-controller="Account" method="post" style="display: inline;">
-                                @Html.AntiForgeryToken()
-                                <button type="submit" class="logout-btn">
-                                    <i class="fas fa-sign-out-alt me-1"></i>
-                                    Đăng xuất
-                                </button>
-                            </form>
-                        }
-                        else
-                        {
-                            <a class="login-btn" asp-controller="Account" asp-action="Login">
-                                <i class="fas fa-user me-1"></i>
-                                Đăng nhập
+                    <div class="d-flex align-items-center flex-wrap gap-3">
+                        <div class="header-actions">
+                            <a href="#" class="header-action">
+                                <i class="fas fa-phone"></i>
+                                <span class="d-none d-md-inline">1800.2097</span>
                             </a>
-                        }
+                            <a href="#" class="header-action">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span class="d-none d-md-inline">Cửa hàng</span>
+                            </a>
+                            <a href="#" class="header-action">
+                                <i class="fas fa-truck"></i>
+                                <span class="d-none d-md-inline">Tra cứu</span>
+                            </a>
+                            <a href="#" class="header-action cart">
+                                <i class="fas fa-shopping-cart"></i>
+                                <span>Giỏ hàng</span>
+                                <span class="badge bg-danger ms-1">0</span>
+                            </a>
+                        </div>
+                        <div class="auth-section">
+                            @if (User.Identity.IsAuthenticated)
+                            {
+                                <span class="user-greeting">
+                                    <i class="fas fa-user-circle me-1"></i>
+                                    Xin chào, @User.Identity.Name
+                                </span>
+                                <form asp-action="Logout" asp-controller="Account" method="post" style="display: inline;">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="logout-btn">
+                                        <i class="fas fa-sign-out-alt me-1"></i>
+                                        Đăng xuất
+                                    </button>
+                                </form>
+                            }
+                            else
+                            {
+                                <a class="login-btn" asp-controller="Account" asp-action="Login">
+                                    <i class="fas fa-user me-1"></i>
+                                    Đăng nhập
+                                </a>
+                            }
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Navigation menu -->
         <nav class="nav-menu">
             <div class="container">
-                <div class="nav-container">
-                    <div class="nav-item">
-                        <a href="#" class="nav-link">
-                            <i class="fab fa-apple"></i>
-                            <span>iPhone</span>
-                        </a>
-                    </div>
-                    <div class="nav-item">
-                        <a href="#" class="nav-link">
-                            <i class="fas fa-tablet-alt"></i>
-                            <span>iPad</span>
-                        </a>
-                    </div>
-                    <div class="nav-item">
-                        <a href="#" class="nav-link">
-                            <i class="fas fa-laptop"></i>
-                            <span>MacBook</span>
-                        </a>
-                    </div>
-                    <div class="nav-item">
-                        <a href="#" class="nav-link">
-                            <i class="fas fa-clock"></i>
-                            <span>Apple Watch</span>
-                        </a>
-                    </div>
-                    <div class="nav-item">
-                        <a href="#" class="nav-link">
-                            <i class="fas fa-headphones"></i>
-                            <span>AirPods</span>
-                        </a>
-                    </div>
+                <div class="nav-container d-flex flex-wrap">
+                    @if (ViewBag.Categories != null)
+                    {
+                        foreach (var category in ViewBag.Categories as List<ECommerceSystem.Shared.DTOs.Category.CategoryDTO>)
+                        {
+                            <div class="nav-item">
+                                <a href="@Url.Action("Index", "Product", new { categoryId = category.Id })" class="nav-link">
+                                    <i class="fas fa-tag"></i> @category.Name
+                                </a>
+                            </div>
+                        }
+                    }
                 </div>
             </div>
         </nav>
     </div>
-
-    <!-- Loading overlay -->
-    <div id="loading" class="loading-overlay d-none">
-        <div class="loading-spinner"></div>
-    </div>
-
-    <!-- Main content -->
     <div class="container">
         <main role="main" class="main-content">
             @RenderBody()
         </main>
     </div>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="footer-content">
-            <div class="container">
-                <div class="row">
-                    <div class="col-lg-4 col-md-6 mb-4">
-                        <div class="footer-section">
-                            <h5><i class="fas fa-store me-2"></i>ECommerce Shop</h5>
-                            <p class="mb-3">Giải pháp mua sắm chuyên nghiệp, hiện đại và tiện lợi. Chúng tôi cam kết mang đến cho bạn những sản phẩm chất lượng nhất với dịch vụ tốt nhất.</p>
-                            <div class="d-flex gap-3">
-                                <a href="#" class="text-white"><i class="fab fa-facebook-f"></i></a>
-                                <a href="#" class="text-white"><i class="fab fa-twitter"></i></a>
-                                <a href="#" class="text-white"><i class="fab fa-instagram"></i></a>
-                                <a href="#" class="text-white"><i class="fab fa-youtube"></i></a>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-2 col-md-6 mb-4">
-                        <div class="footer-section">
-                            <h5>Sản phẩm</h5>
-                            <ul class="list-unstyled">
-                                <li><a href="#" class="footer-link">iPhone</a></li>
-                                <li><a href="#" class="footer-link">iPad</a></li>
-                                <li><a href="#" class="footer-link">MacBook</a></li>
-                                <li><a href="#" class="footer-link">Apple Watch</a></li>
-                                <li><a href="#" class="footer-link">AirPods</a></li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div class="col-lg-3 col-md-6 mb-4">
-                        <div class="footer-section">
-                            <h5>Hỗ trợ</h5>
-                            <ul class="list-unstyled">
-                                <li><a href="#" class="footer-link">Chính sách bảo mật</a></li>
-                                <li><a href="#" class="footer-link">Điều khoản sử dụng</a></li>
-                                <li><a href="#" class="footer-link">Chính sách đổi trả</a></li>
-                                <li><a href="#" class="footer-link">Hướng dẫn mua hàng</a></li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div class="col-lg-3 col-md-6 mb-4">
-                        <div class="footer-section">
-                            <h5>Liên hệ</h5>
-                            <div class="footer-contact">
-                                <i class="fas fa-envelope"></i>
-                                <span>contact@ecommerce.com</span>
-                            </div>
-                            <div class="footer-contact">
-                                <i class="fas fa-phone"></i>
-                                <span>1800.2097</span>
-                            </div>
-                            <div class="footer-contact">
-                                <i class="fas fa-map-marker-alt"></i>
-                                <span>TP. Hồ Chí Minh, Việt Nam</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="footer-bottom">
-            <div class="container">
-                <p class="mb-0">&copy; 2025 ECommerce Shop. All rights reserved. Made with <i class="fas fa-heart text-danger"></i> in Vietnam</p>
-            </div>
-        </div>
-    </footer>
-
-    <script src="~/lib/jquery/dist/jquery.min.js" defer></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js" defer></script>
-    <script src="~/js/site.js" asp-append-version="true" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.validate/1.19.3/jquery.validate.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.validate.unobtrusive/3.2.12/jquery.validate.unobtrusive.min.js" defer></script>
-
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script>
-        $(document).ready(function() {
-            // Loading animation
-            $(document).ajaxStart(function() {
-                $("#loading").removeClass("d-none");
-            });
-
-            $(document).ajaxComplete(function() {
-                $("#loading").addClass("d-none");
-            });
-
-            $("form").submit(function() {
-                $("#loading").removeClass("d-none");
-            });
-
-            // Search functionality
-            $('.search-input').on('focus', function() {
-                $(this).parent().addClass('search-focused');
-            }).on('blur', function() {
-                $(this).parent().removeClass('search-focused');
-            });
-
-            // Smooth scrolling for navigation links
-            $('.nav-link').on('click', function(e) {
-                const href = $(this).attr('href');
-                if (href.startsWith('#')) {
-                    e.preventDefault();
-                    $('html, body').animate({
-                        scrollTop: $(href).offset().top - 100
-                    }, 500);
-                }
-            });
-
-            // Add animation to cards and elements when they come into view
-            const observerOptions = {
-                threshold: 0.1,
-                rootMargin: '0px 0px -50px 0px'
-            };
-
-            const observer = new IntersectionObserver(function(entries) {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.style.opacity = '1';
-                        entry.target.style.transform = 'translateY(0)';
-                    }
-                });
-            }, observerOptions);
-
-            // Observe elements for animation
-            $('.card, .footer-section').each(function() {
-                this.style.opacity = '0';
-                this.style.transform = 'translateY(20px)';
-                this.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-                observer.observe(this);
+        $(document).ready(function () {
+            $('#toggle-category').on('click', function () {
+                $('.nav-menu').slideToggle();
             });
         });
     </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
-
