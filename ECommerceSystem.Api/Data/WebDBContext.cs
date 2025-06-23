@@ -29,6 +29,7 @@ public class WebDBContext : DbContext
         modelBuilder.Entity<OrderItem>().Property(oi => oi.Price).HasPrecision(18, 2);
         modelBuilder.Entity<Product>().Property(p => p.Price).HasPrecision(18, 2);
         modelBuilder.Entity<CartDetail>().Property(c => c.UnitPrice).HasPrecision(18, 2);
+        modelBuilder.Entity<PaymentReceipt>().Property(p => p.TotalAmount).HasPrecision(18, 2); // 👈 THÊM DÒNG NÀY
 
         // 🔁 Cấu hình quan hệ User - Role
         modelBuilder.Entity<User>()

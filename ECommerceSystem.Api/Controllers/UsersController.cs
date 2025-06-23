@@ -9,7 +9,8 @@ namespace ECommerceSystem.Api.Controllers
 {
     [ApiController]
     [Route("api/admin/users")]
-    [Authorize(Roles = "Admin")] // Chỉ cho phép Admin truy cập
+    [Authorize(Roles = "Admin")]
+    [AllowAnonymous] // Cho phép truy cập công khai (GET danh mục)
     public class UsersController : ControllerBase
     {
         private readonly IUserService _userService;

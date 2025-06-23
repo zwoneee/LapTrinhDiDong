@@ -12,8 +12,8 @@ using System.Threading.Tasks;
 
 namespace ECommerceSystem.Api.Controllers
 {
-    // Chỉ cho phép người dùng có vai trò Admin truy cập
     [Authorize(Roles = "Admin")]
+    [AllowAnonymous] // Cho phép truy cập công khai (GET danh mục)
     [Route("api/admin")]
     [ApiController]
     public class AdminController : ControllerBase

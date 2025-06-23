@@ -1,10 +1,12 @@
 ﻿using ECommerceSystem.Shared.DTOs.Product;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 [Route("api/admin/orders")]
 [ApiController]
-//[Authorize(Roles = "Admin")]
+[Authorize(Roles = "Admin")]
+[AllowAnonymous] // Cho phép truy cập công khai (GET danh mục)
 public class AdminOrdersController : ControllerBase
 {
     private readonly WebDBContext _context;

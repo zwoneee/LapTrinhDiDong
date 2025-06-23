@@ -14,8 +14,8 @@ namespace ECommerceSystem.Api.Controllers
 {
     [Route("api/public/products")]
     [ApiController]
-    [AllowAnonymous] // Cho phép người dùng không đăng nhập gọi GET
-    [Authorize(Roles = "Admin", AuthenticationSchemes = "Bearer")] // Bắt buộc Admin xác thực khi gọi POST/PUT/DELETE
+    [Authorize(Roles = "Admin")]
+    [AllowAnonymous] // Cho phép truy cập công khai (GET danh mục)
     public class ProductsController : ControllerBase
     {
         private readonly WebDBContext _dbContext;
