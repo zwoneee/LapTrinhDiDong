@@ -15,6 +15,8 @@ public class WebDBContext : DbContext
     public DbSet<Category> Categories { get; set; }
     public DbSet<User> Users { get; set; }
     public DbSet<Role> Roles { get; set; }
+    public DbSet<PaymentReceipt> PaymentReceipts { get; set; }
+
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

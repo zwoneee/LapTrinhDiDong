@@ -13,5 +13,6 @@ namespace ECommerceSystem.Shared.Entities
         public DateTime? UpdatedAt { get; set; }
         public bool IsDeleted { get; set; }
         public List<OrderItem> OrderItems { get; set; }
+
     }
 }

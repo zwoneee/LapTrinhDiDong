@@ -29,7 +29,7 @@ builder.Services.AddSwaggerGen(c =>
     // Cho phép nhập token thuần (không cần "Bearer ")
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
-        Description = "Chỉ dán JWT token vào đây (KHÔNG cần thêm 'Bearer ' ở đầu)",
+        Description = "Dán JWT token không cần Bearer:  ",
         Name = "Authorization",
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
         Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,

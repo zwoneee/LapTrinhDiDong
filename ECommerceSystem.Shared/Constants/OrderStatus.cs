@@ -9,6 +9,7 @@ namespace ECommerceSystem.Shared.Constants
     public static class OrderStatus
     {
         public const string Pending = "Pending";
+        public const string Paid = "Paid";
         public const string Processing = "Processing";
         public const string Delivered = "Delivered";
         public const string Failed = "Failed";

@@ -9,12 +9,14 @@ using ECommerceSystem.Api.Hubs;
 using ECommerceSystem.Shared.DTOs.Product;
 using Microsoft.AspNetCore.SignalR;
 using System;
+using ECommerceSystem.Shared.DTOs.PayOrders;
+using Microsoft.EntityFrameworkCore;
 
 namespace ECommerceSystem.Api.Controllers
 {
     [Route("api/user/orders")]
     [ApiController]
-   // [Authorize]
+    // [Authorize]
     public class OrdersController : ControllerBase
     {
         private readonly WebDBContext _dbContext;
@@ -73,6 +75,50 @@ namespace ECommerceSystem.Api.Controllers
                     Quantity = i.Quantity,
                     Price = i.Price
                 }).ToList()
+            });
+        }
+        [HttpPost("pay-all")]
+        public async Task<IActionResult> PayAllOrders([FromBody] PayAllOrdersRequest request)
+        {
+            var pendingOrders = await _dbContext.Orders
+                .Where(o => o.UserId == request.UserId && o.Status == OrderStatus.Pending)
+                .Include(o => o.OrderItems)
+                .ToListAsync();
+
+            if (!pendingOrders.Any())
+                return BadRequest("Không có đơn hàng đang chờ thanh toán.");
+
+            var total = pendingOrders.Sum(o => o.Total);
+
+            var receipt = new PaymentReceipt
+            {
+                UserId = request.UserId,
+                TotalAmount = total,
+                PaymentMethod = request.PaymentMethod,
+                CreatedAt = DateTime.UtcNow,
+                Orders = pendingOrders
+            };
+
+            _dbContext.PaymentReceipts.Add(receipt);
+
+            // Cập nhật trạng thái đơn hàng hoặc xóa hẳn:
+            // Cách 1: đánh dấu đã thanh toán
+            foreach (var order in pendingOrders)
+            {
+                order.Status = OrderStatus.Paid;
+            }
+
+            // Cách 2: xóa khỏi database
+            // _dbContext.Orders.RemoveRange(pendingOrders);
+
+            await _dbContext.SaveChangesAsync();
+
+            return Ok(new
+            {
+                Message = "Thanh toán thành công",
+                ReceiptId = receipt.Id,
+                Total = receipt.TotalAmount,
+                OrderIds = pendingOrders.Select(o => o.Id)
             });
         }
     }
