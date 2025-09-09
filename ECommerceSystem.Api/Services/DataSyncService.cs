@@ -1,5 +1,4 @@
 ﻿using ECommerceSystem.Api.Data;
-using ECommerceSystem.Api.Data.Mongo;
 using ECommerceSystem.Shared.Documents; // Thêm namespace này
 using Microsoft.EntityFrameworkCore;
 using MongoDB.Driver;
@@ -10,12 +9,10 @@ namespace ECommerceSystem.Api.Services
     public class DataSyncService
     {
         private readonly WebDBContext _dbContext; 
-        private readonly MongoDbContext _mongoContext;
 
-        public DataSyncService(WebDBContext dbContext, MongoDbContext mongoContext)
+        public DataSyncService(WebDBContext dbContext)
         {
             _dbContext = dbContext;
-            _mongoContext = mongoContext;
         }
 
         public async Task SyncProductsToMongo()
@@ -33,11 +30,6 @@ namespace ECommerceSystem.Api.Services
                     Name = product.Name,
                     LastSynced = DateTime.UtcNow
                 };
-
-                await _mongoContext.Products.ReplaceOneAsync(
-                    p => p.ProductId == product.Id,
-                    productDoc,
-                    new ReplaceOptions { IsUpsert = true });
             }
         }
     }

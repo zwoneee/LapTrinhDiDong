@@ -16,13 +16,15 @@ namespace ECommerceSystem.GUI.Services
     {
         private readonly IAuthApi _authApi;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly ILogger<AuthService> _logger;
 
         private const string TokenCookieName = "AuthToken";
 
-        public AuthService(IAuthApi authApi, IHttpContextAccessor httpContextAccessor)
+        public AuthService(IAuthApi authApi, IHttpContextAccessor httpContextAccessor, ILogger<AuthService> logger)
         {
             _authApi = authApi;
             _httpContextAccessor = httpContextAccessor;
+            _logger = logger;  // <-- gán
         }
 
 
@@ -47,13 +49,13 @@ namespace ECommerceSystem.GUI.Services
                         var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
 
                         await _httpContextAccessor.HttpContext.SignInAsync(
-    "MyCookieAuth", // đúng scheme đã đăng ký
-    claimsPrincipal,
-    new AuthenticationProperties
-    {
-        IsPersistent = true,
-        ExpiresUtc = DateTimeOffset.UtcNow.AddHours(1)
-    });
+                        "MyCookieAuth", // đúng scheme đã đăng ký
+                        claimsPrincipal,
+                        new AuthenticationProperties
+                        {
+                            IsPersistent = true,
+                            ExpiresUtc = DateTimeOffset.UtcNow.AddHours(1)
+                        });
 
                     }
 
@@ -74,13 +76,21 @@ namespace ECommerceSystem.GUI.Services
             try
             {
                 var response = await _authApi.Register(model);
-                return response != null;
+                if (response != null)
+                    return true;
+
+                _logger.LogWarning("Register returned null for username {Username}", model.UserName);
+                return false;
             }
             catch (ApiException ex)
             {
+                var content = ex.Content; // Refit ApiException có property Content
+                _logger.LogError("Register failed for {Username}. Status: {StatusCode}, Content: {Content}",
+                                 model.UserName, ex.StatusCode, content);
                 return false;
             }
         }
+
 
         public async Task<string> GetCurrentRoleAsync()
         {

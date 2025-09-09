@@ -1,66 +1,47 @@
 ﻿using ECommerceSystem.GUI.Apis;
-using ECommerceSystem.GUI.Controllers;
-
-// Nếu AuthRetryHandler nằm trong namespace này
 using ECommerceSystem.GUI.Services;
 using ECommerceSystem.GUI.Services.ECommerceSystem.GUI.Handlers;
 using ECommerceSystem.Shared.Constants;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Refit;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// Add MVC + HttpContextAccessor
 builder.Services.AddControllersWithViews();
 builder.Services.AddHttpContextAccessor();
+
+// Custom services
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddTransient<AuthRetryHandler>();
-ConfigureRefit(builder.Services);
 
-// Cấu hình xác thực
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = "MyCookieAuth"; // Sử dụng scheme tùy chỉnh
-    options.DefaultChallengeScheme = "MyCookieAuth";
-})
-.AddCookie("MyCookieAuth", options =>
-{
-    options.LoginPath = "/Account/Login";
-    options.AccessDeniedPath = "/Home/Error";
-    options.ExpireTimeSpan = TimeSpan.FromHours(1);
-    options.SlidingExpiration = true;
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
+// ✅ Cấu hình xác thực: Cookie cho GUI, JWT cho Web API
+builder.Services.AddAuthentication("MyCookieAuth")
+    .AddCookie("MyCookieAuth", options =>
     {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = builder.Configuration["Jwt:Issuer"], // Thay bằng issuer từ API của bạn
-        ValidAudience = builder.Configuration["Jwt:Audience"], // Thay bằng audience từ API
-        IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])) // Thay bằng key từ API
-    };
-    options.Events = new JwtBearerEvents
-    {
-        OnMessageReceived = context =>
-        {
-            // Lấy token từ cookie thay vì header Authorization
-            context.Token = context.Request.Cookies["AuthToken"];
-            return Task.CompletedTask;
-        }
-    };
-});
+        options.LoginPath = "/Account/Login";
+        options.AccessDeniedPath = "/Home/Error";
+        options.ExpireTimeSpan = TimeSpan.FromHours(1);
+        options.SlidingExpiration = true;
+    });
+
+// ✅ Không cần AddJwtBearer nếu GUI không host API trực tiếp
+
+// ✅ Đăng ký các HTTP client gửi JWT qua Authorization header
+ConfigureRefit(builder.Services);
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
+// Exception Page nếu đang dev
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage(); // 👈 NÊN thêm để debug lỗi 500
+}
+else
 {
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
@@ -71,7 +52,7 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-app.UseAuthentication(); // Thêm middleware xác thực
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllerRoute(
@@ -80,43 +61,51 @@ app.MapControllerRoute(
 
 app.Run();
 
-// ConfigureRefit
+
+// ✅ Hàm cấu hình Refit + tự động gắn Authorization Bearer từ cookie
 static void ConfigureRefit(IServiceCollection services)
 {
+    void SetHttpClient(HttpClient client, IServiceProvider sp)
+    {
+        client.BaseAddress = new Uri(AppConstants.ApiBaseUrl);
+        client.Timeout = TimeSpan.FromSeconds(20);
+
+        var context = sp.GetRequiredService<IHttpContextAccessor>().HttpContext;
+        var token = context?.Request?.Cookies["AuthToken"];
+
+        if (!string.IsNullOrEmpty(token))
+        {
+            client.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        }
+    }
+
+    // 👇 Updated to use a lambda to wrap the method group
     services.AddRefitClient<IAuthApi>()
         .AddHttpMessageHandler<AuthRetryHandler>()
-        .ConfigureHttpClient(SetHttpClient);
+        .ConfigureHttpClient((sp, client) => SetHttpClient(client, sp));
 
     services.AddRefitClient<IOrderApi>()
-       .AddHttpMessageHandler<AuthRetryHandler>()
-       .ConfigureHttpClient(SetHttpClient); 
+        .AddHttpMessageHandler<AuthRetryHandler>()
+        .ConfigureHttpClient((sp, client) => SetHttpClient(client, sp));
 
     services.AddRefitClient<ICategoryApi>()
         .AddHttpMessageHandler<AuthRetryHandler>()
-        .ConfigureHttpClient(SetHttpClient);
+        .ConfigureHttpClient((sp, client) => SetHttpClient(client, sp));
 
     services.AddRefitClient<IProductApi>()
-       .AddHttpMessageHandler<AuthRetryHandler>()
-       .ConfigureHttpClient(SetHttpClient);
-    services.AddRefitClient<ICartApi>()
-       .AddHttpMessageHandler<AuthRetryHandler>()
-       .ConfigureHttpClient(SetHttpClient);
-    services.AddRefitClient<IUserApi>()
-       .AddHttpMessageHandler<AuthRetryHandler>()
-       .ConfigureHttpClient(SetHttpClient);
-    services.AddRefitClient<IAdminApi>()
-      .AddHttpMessageHandler<AuthRetryHandler>()
-      .ConfigureHttpClient(SetHttpClient);
+        .AddHttpMessageHandler<AuthRetryHandler>()
+        .ConfigureHttpClient((sp, client) => SetHttpClient(client, sp));
 
-    //services.AddRefitClient<IAuthApi>()
-    //   .AddHttpMessageHandler<AuthRetryHandler>()
-    //   .ConfigureHttpClient(SetHttpClient);
-    void SetHttpClient(HttpClient httpClient)
-    {
-        httpClient.BaseAddress = new Uri(AppConstants.ApiBaseUrl);
-        httpClient.Timeout = TimeSpan.FromSeconds(20);
-        Console.WriteLine($"[Refit] BaseAddress set to: {httpClient.BaseAddress}");
-    }
-  
-    
+    services.AddRefitClient<ICartApi>()
+        .AddHttpMessageHandler<AuthRetryHandler>()
+        .ConfigureHttpClient((sp, client) => SetHttpClient(client, sp));
+
+    services.AddRefitClient<IUserApi>()
+        .AddHttpMessageHandler<AuthRetryHandler>()
+        .ConfigureHttpClient((sp, client) => SetHttpClient(client, sp));
+
+    services.AddRefitClient<IAdminApi>()
+        .AddHttpMessageHandler<AuthRetryHandler>()
+        .ConfigureHttpClient((sp, client) => SetHttpClient(client, sp));
 }

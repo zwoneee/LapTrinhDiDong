@@ -22,7 +22,8 @@ namespace ECommerceSystem.Api.Repositories
         public async Task<int> AddItem(int productId, int qty)
         {
             int userId = GetUserId();
-            using var transaction = _db.Database.BeginTransaction();
+
+            using var transaction = await _db.Database.BeginTransactionAsync();
             try
             {
                 var cart = await _db.ShoppingCarts.FirstOrDefaultAsync(x => x.UserId == userId.ToString());
@@ -33,7 +34,7 @@ namespace ECommerceSystem.Api.Repositories
                     await _db.SaveChangesAsync();
                 }
 
-                var cartItem = _db.CartDetails.FirstOrDefault(a => a.ShoppingCartId == cart.Id && a.ProductId == productId);
+                var cartItem = await _db.CartDetails.FirstOrDefaultAsync(a => a.ShoppingCartId == cart.Id && a.ProductId == productId);
                 if (cartItem != null)
                 {
                     cartItem.Quantity += qty;
@@ -56,51 +57,51 @@ namespace ECommerceSystem.Api.Repositories
 
                 await _db.SaveChangesAsync();
                 await transaction.CommitAsync();
+                return await GetCartItemCount(userId.ToString());
             }
-            catch { }
-
-            var cartItemCount = await GetCartItemCount(userId.ToString());
-
-            return cartItemCount;
+            catch (Exception ex)
+            {
+                Console.WriteLine("❌ [CartRepository] AddItem Error: " + ex.Message);
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
         public async Task<int> RemoveItem(int productId)
         {
             int userId = GetUserId();
+
             try
             {
                 var cart = await _db.ShoppingCarts.FirstOrDefaultAsync(x => x.UserId == userId.ToString());
                 if (cart == null)
                     throw new InvalidOperationException("Invalid cart");
 
-                var cartItem = _db.CartDetails.FirstOrDefault(a => a.ShoppingCartId == cart.Id && a.ProductId == productId);
+                var cartItem = await _db.CartDetails.FirstOrDefaultAsync(a => a.ShoppingCartId == cart.Id && a.ProductId == productId);
                 if (cartItem == null)
                     throw new InvalidOperationException("No item in cart");
 
-                if (cartItem.Quantity == 1)
+                if (cartItem.Quantity <= 1)
                     _db.CartDetails.Remove(cartItem);
                 else
                     cartItem.Quantity--;
 
                 await _db.SaveChangesAsync();
+                return await GetCartItemCount(userId.ToString());
             }
-            catch { }
-
-            var cartItemCount = await GetCartItemCount(userId.ToString());
-
-            return cartItemCount;
+            catch (Exception ex)
+            {
+                Console.WriteLine("❌ [CartRepository] RemoveItem Error: " + ex.Message);
+                throw;
+            }
         }
 
-        public async Task<CartDTO> GetUserCart()
-        {
-            int userId = GetUserId();
-            return await BuildCartDTO(userId);
-        }
+    
 
         public async Task<CartDTO> GetCart(string userId)
         {
             if (!int.TryParse(userId, out var id))
-                throw new UnauthorizedAccessException("Invalid user ID");
+                throw new InvalidOperationException("Invalid user ID");
 
             return await BuildCartDTO(id);
         }
@@ -109,18 +110,16 @@ namespace ECommerceSystem.Api.Repositories
         {
             int id = string.IsNullOrEmpty(userId) ? GetUserId() : int.Parse(userId);
 
-            var data = await (from cart in _db.ShoppingCarts
-                              join cartDetail in _db.CartDetails
-                              on cart.Id equals cartDetail.ShoppingCartId
-                              where cart.UserId == id.ToString()
-                              select cartDetail.Id).ToListAsync();
+            var count = await _db.CartDetails
+                .Where(cd => cd.ShoppingCart.UserId == id.ToString())
+                .CountAsync();
 
-            return data.Count();
+            return count;
         }
 
         public async Task<bool> DoCheckout(CheckoutModel model)
         {
-            using var transaction = _db.Database.BeginTransaction();
+            using var transaction = await _db.Database.BeginTransactionAsync();
             try
             {
                 int userId = GetUserId();
@@ -151,29 +150,86 @@ namespace ECommerceSystem.Api.Repositories
                 _db.CartDetails.RemoveRange(cart.CartDetails);
                 await _db.SaveChangesAsync();
                 await transaction.CommitAsync();
-
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine("❌ [CartRepository] DoCheckout Error: " + ex.Message);
+                await transaction.RollbackAsync();
                 return false;
             }
         }
 
+        /// <summary>
+        /// Lấy UserId từ JWT Token
+        /// </summary>
         private int GetUserId()
         {
             var principal = _httpContextAccessor.HttpContext?.User;
 
-            // Hỗ trợ nhiều kiểu claim để linh hoạt hơn
-            var stringId = principal?.FindFirst("nameidentifier")?.Value
-                        ?? principal?.FindFirst("sub")?.Value
-                        ?? principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (principal == null || !principal.Identity.IsAuthenticated)
+                throw new UnauthorizedAccessException("User not authenticated");
+
+            Console.WriteLine("🧾 JWT Claims:");
+            foreach (var claim in principal.Claims)
+            {
+                Console.WriteLine($"➡️ {claim.Type}: {claim.Value}");
+            }
+
+            var stringId =
+                principal.FindFirst(ClaimTypes.NameIdentifier)?.Value ??
+                principal.FindFirst("sub")?.Value ??
+                principal.FindFirst("nameidentifier")?.Value;
+
+            Console.WriteLine($"✅ Claim NameIdentifier tìm được: {stringId}");
 
             if (!int.TryParse(stringId, out var userId))
-                throw new UnauthorizedAccessException("Invalid user ID");
+                throw new UnauthorizedAccessException("Invalid or missing user ID claim");
 
             return userId;
         }
+
+
+        public async Task<CartDTO> GetUserCart()
+        {
+            try
+            {
+                int userId = GetUserId(); // ✅ dùng đúng cách lấy ID
+
+                var cart = await _db.ShoppingCarts
+                    .Include(c => c.CartDetails)
+                    .ThenInclude(d => d.Product)
+                    .FirstOrDefaultAsync(c => c.UserId == userId.ToString());
+
+                if (cart == null)
+                {
+                    return new CartDTO
+                    {
+                        UserId = userId,
+                        Items = new List<CartItemDTO>()
+                    };
+                }
+
+                return new CartDTO
+                {
+                    UserId = userId,
+                    Items = cart.CartDetails.Select(d => new CartItemDTO
+                    {
+                        ProductId = d.ProductId,
+                        Name = d.Product?.Name ?? "",
+                        Quantity = d.Quantity,
+                        Price = d.UnitPrice
+                    }).ToList()
+                };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("❌ [CartRepository] GetUserCart Error: " + ex.Message);
+                throw;
+            }
+        }
+
+
 
 
         private async Task<CartDTO> BuildCartDTO(int userId)

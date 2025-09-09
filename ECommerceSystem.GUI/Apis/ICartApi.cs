@@ -21,7 +21,7 @@ namespace ECommerceSystem.GUI.Apis
 
         // GET api/user/cart/count
         [Get("/api/user/cart/count")]
-        Task<ApiResponse<object>> GetCartItemCount();
+        Task<ApiResponse<int>> GetCartItemCount();
 
         // POST api/user/cart/checkout
         [Post("/api/user/cart/checkout")]

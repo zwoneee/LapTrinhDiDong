@@ -1,40 +1,36 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using ECommerceSystem.Api.Data;
+﻿using ECommerceSystem.Api.Data;
 using ECommerceSystem.Shared.DTOs;
-using ECommerceSystem.Shared.Entities;
-using ECommerceSystem.Api.Data.Mongo;
 using ECommerceSystem.Shared.DTOs.Product;
+using ECommerceSystem.Shared.Entities;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using System;
 using System.Text.Json;
-using Microsoft.AspNetCore.Authorization;
 
 namespace ECommerceSystem.Api.Controllers
 {
     [Route("api/public/products")]
     [ApiController]
-    [Authorize(Roles = "Admin")]
-    [AllowAnonymous] // Cho phép truy cập công khai (GET danh mục)
+    [Authorize(Roles = "Admin")] // Mặc định chỉ Admin được POST, PUT, DELETE
     public class ProductsController : ControllerBase
     {
         private readonly WebDBContext _dbContext;
-        private readonly MongoDbContext _mongoContext;
         private readonly IDistributedCache _cache;
 
-        // Inject SQL DbContext, MongoDbContext và cache Redis
-        public ProductsController(WebDBContext dbContext, MongoDbContext mongoContext, IDistributedCache cache)
+        public ProductsController(WebDBContext dbContext, IDistributedCache cache)
         {
             _dbContext = dbContext;
-            _mongoContext = mongoContext;
             _cache = cache;
         }
 
         /// <summary>
         /// [GET] /api/public/products
-        /// Truy vấn danh sách sản phẩm theo bộ lọc, phân trang, cache và ghi log tìm kiếm vào MongoDB
+        /// Lấy danh sách sản phẩm (công khai)
         /// </summary>
         [HttpGet]
+        [AllowAnonymous]
         public async Task<IActionResult> GetProducts(
             string? search,
             int? categoryId,
@@ -45,18 +41,14 @@ namespace ECommerceSystem.Api.Controllers
             int page = 1,
             int pageSize = 10)
         {
-            // Tạo khóa cache dựa trên các tham số truy vấn
             var cacheKey = $"products_{search}_{categoryId}_{minPrice}_{maxPrice}_{sortBy}_{promotion}_{page}_{pageSize}";
             var cachedResult = await _cache.GetStringAsync(cacheKey);
 
-            // Nếu có cache thì trả về luôn
             if (!string.IsNullOrEmpty(cachedResult))
                 return Ok(JsonSerializer.Deserialize<object>(cachedResult));
 
-            // Query cơ bản: sản phẩm chưa bị xóa
             var query = _dbContext.Products.Where(p => !p.IsDeleted);
 
-            // Bộ lọc nâng cao
             if (!string.IsNullOrEmpty(search))
                 query = query.Where(p => p.Name.Contains(search) || p.Description.Contains(search));
 
@@ -72,7 +64,6 @@ namespace ECommerceSystem.Api.Controllers
             if (promotion.HasValue)
                 query = query.Where(p => p.IsPromoted == promotion);
 
-            // Sắp xếp
             query = sortBy switch
             {
                 "priceAsc" => query.OrderBy(p => p.Price),
@@ -81,10 +72,8 @@ namespace ECommerceSystem.Api.Controllers
                 _ => query.OrderBy(p => p.Id)
             };
 
-            // Lấy tổng số sản phẩm
             var total = await query.CountAsync();
 
-            // Phân trang kết quả và chuyển về DTO
             var products = await query
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
@@ -98,43 +87,69 @@ namespace ECommerceSystem.Api.Controllers
                     CategoryId = p.CategoryId,
                     Rating = p.Rating,
                     IsPromoted = p.IsPromoted,
-                    QrCode = p.QrCode
+                    QrCode = p.QrCode,
+                    Stock = p.Stock,
+                    Slug = p.Slug
                 })
                 .ToListAsync();
 
-            // Lưu từ khóa tìm kiếm vào MongoDB để phân tích hành vi người dùng
-            if (!string.IsNullOrEmpty(search))
+            var result = new { total, page, pageSize, products };
+
+            // Cache Redis
+            try
             {
-                await _mongoContext.Preferences.InsertOneAsync(new UserPreference
+                await _cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(result), new DistributedCacheEntryOptions
                 {
-                    GuestId = Guid.NewGuid().ToString(),
-                    SearchHistory = new List<string> { search },
-                    Timestamp = DateTime.UtcNow
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
                 });
             }
-
-            // Cache kết quả
-            var result = new { total, page, pageSize, products };
-            await _cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(result), new DistributedCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
-            });
+            catch { /* Nếu Redis lỗi thì vẫn trả dữ liệu */ }
 
             return Ok(result);
         }
 
         /// <summary>
+        /// [GET] /api/public/products/{id}
+        /// Lấy chi tiết sản phẩm theo ID (công khai)
+        /// </summary>
+        [HttpGet("{id}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetById(int id)
+        {
+            var product = await _dbContext.Products
+                .Where(p => p.Id == id && !p.IsDeleted)
+                .Select(p => new ProductDTO
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    Price = p.Price,
+                    Description = p.Description,
+                    ThumbnailUrl = p.ThumbnailUrl,
+                    CategoryId = p.CategoryId,
+                    Rating = p.Rating,
+                    IsPromoted = p.IsPromoted,
+                    QrCode = p.QrCode,
+                    Stock = p.Stock,
+                    Slug = p.Slug
+                })
+                .FirstOrDefaultAsync();
+
+            if (product == null)
+                return NotFound();
+
+            return Ok(product);
+        }
+
+        /// <summary>
         /// [POST] /api/public/products
-        /// Thêm sản phẩm mới (chỉ Admin được phép)
+        /// Thêm sản phẩm mới (Admin)
         /// </summary>
         [HttpPost]
-        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AddProduct([FromBody] ProductDTO model)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            // Tạo entity từ DTO
             var product = new Product
             {
                 Name = model.Name,
@@ -146,23 +161,22 @@ namespace ECommerceSystem.Api.Controllers
                 Rating = model.Rating,
                 IsPromoted = model.IsPromoted,
                 QrCode = model.QrCode,
+                Slug = model.Slug,
                 CreatedAt = DateTime.UtcNow,
-                IsDeleted = false,
-                Slug = model.Slug
+                IsDeleted = false
             };
 
             _dbContext.Products.Add(product);
             await _dbContext.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetProducts), new { id = product.Id }, product);
+            return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
         }
 
         /// <summary>
         /// [PUT] /api/public/products/{id}
-        /// Sửa thông tin sản phẩm (chỉ Admin)
+        /// Cập nhật sản phẩm (Admin)
         /// </summary>
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> EditProduct(int id, [FromBody] ProductDTO model)
         {
             if (!ModelState.IsValid)
@@ -172,7 +186,6 @@ namespace ECommerceSystem.Api.Controllers
             if (product == null || product.IsDeleted)
                 return NotFound();
 
-            // Cập nhật thông tin sản phẩm
             product.Name = model.Name;
             product.Price = model.Price;
             product.Description = model.Description;
@@ -182,8 +195,8 @@ namespace ECommerceSystem.Api.Controllers
             product.Rating = model.Rating;
             product.IsPromoted = model.IsPromoted;
             product.QrCode = model.QrCode;
-            product.UpdatedAt = DateTime.UtcNow;
             product.Slug = model.Slug;
+            product.UpdatedAt = DateTime.UtcNow;
 
             await _dbContext.SaveChangesAsync();
 
@@ -192,21 +205,21 @@ namespace ECommerceSystem.Api.Controllers
 
         /// <summary>
         /// [DELETE] /api/public/products/{id}
-        /// Xóa sản phẩm (mềm) – chỉ Admin
+        /// Xóa mềm sản phẩm (Admin)
         /// </summary>
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteProduct(int id)
         {
             var product = await _dbContext.Products.FindAsync(id);
             if (product == null || product.IsDeleted)
                 return NotFound();
 
-            // Xóa mềm – nếu muốn xóa cứng thì dùng Remove()
-            _dbContext.Products.Remove(product);
+            product.IsDeleted = true;
+            product.UpdatedAt = DateTime.UtcNow;
+
             await _dbContext.SaveChangesAsync();
 
-            return NoContent(); // 204
+            return NoContent();
         }
     }
 }

@@ -1,6 +1,5 @@
 using AspNetCoreRateLimit;
 using ECommerceSystem.Api.Data;
-using ECommerceSystem.Api.Data.Mongo;
 using ECommerceSystem.Api.Data.Repositories;
 using ECommerceSystem.Api.Hubs;
 using ECommerceSystem.Api.Repositories;
@@ -26,7 +25,7 @@ builder.Services.AddSwaggerGen(c =>
 
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
-        Description = "Dán JWT token không cần Bearer:  ",
+        Description = "Dán JWT token vào đây (không cần ghi chữ Bearer):",
         Name = "Authorization",
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
         Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
@@ -56,10 +55,6 @@ builder.Services.AddSwaggerGen(c =>
 #region Database & MongoDB
 builder.Services.AddDbContext<WebDBContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-var mongoConfig = builder.Configuration.GetSection("MongoDbSettings").Get<MongoDbSettings>();
-builder.Services.AddSingleton(sp =>
-    new MongoDbContext(mongoConfig.ConnectionString, mongoConfig.DatabaseName));
 #endregion
 
 #region Redis
@@ -84,7 +79,6 @@ builder.Services.AddSignalR();
 builder.Services.AddMemoryCache();
 builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
 builder.Services.AddInMemoryRateLimiting();
-
 builder.Services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
 builder.Services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
 builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
@@ -110,7 +104,6 @@ builder.Services.AddAuthentication("Bearer")
             OnMessageReceived = context =>
             {
                 var rawToken = context.Request.Headers["Authorization"].FirstOrDefault();
-
                 if (!string.IsNullOrEmpty(rawToken) && !rawToken.StartsWith("Bearer "))
                 {
                     context.Token = rawToken;
@@ -125,29 +118,24 @@ builder.Services.AddAuthentication("Bearer")
 #region CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowMvcApp", builder =>
+    options.AddPolicy("AllowMvcApp", policy =>
     {
-        builder.WithOrigins("https://localhost:7068", "http://localhost:5088")
-               .AllowAnyMethod()
-               .AllowAnyHeader()
-               .AllowCredentials();
+        policy.WithOrigins("https://localhost:7068", "http://localhost:5088")
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials();
     });
 });
 #endregion
 
 #region Dependency Injection
 builder.Services.AddHttpContextAccessor();
-
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<UserRepository>();
-
 builder.Services.AddScoped<DataSyncService>();
-builder.Services.AddScoped<UserRepository>();
-builder.Services.AddScoped<ICartRepository, CartRepository>(); // ✅ Di chuyển xuống đây
-
+builder.Services.AddScoped<ICartRepository, CartRepository>();
 builder.Services.AddControllers();
 #endregion
-
 
 var app = builder.Build();
 
@@ -165,11 +153,17 @@ else
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles(); // ✅ nếu bạn có file ảnh sản phẩm, nên bật cái này
+
 app.UseCors("AllowMvcApp");
+
 app.UseIpRateLimiting();
+
 app.UseRouting();
+
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
 app.MapHub<NotificationHub>("/notificationHub");
 #endregion
@@ -189,6 +183,14 @@ using (var scope = app.Services.CreateScope())
         logger.LogError(ex, "Có lỗi xảy ra khi khởi tạo vai trò.");
     }
 }
+
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    await RoleInitializer.InitializeAsync(services);
+    await UserInitializer.InitializeAsync(services);
+}
+
 #endregion
 
 app.Run();

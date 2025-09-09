@@ -18,7 +18,7 @@ namespace ECommerceSystem.GUI.Controllers
 
         public IActionResult Index()
         {
-            return RedirectToAction("Dashboard");
+            return View();
         }
 
         public async Task<IActionResult> Dashboard()

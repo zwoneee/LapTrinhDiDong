@@ -23,11 +23,12 @@ namespace ECommerceSystem.GUI.Controllers
                 var cart = await _cartApi.GetCart();
                 return View(cart);
             }
-            catch
+            catch (Exception ex)
             {
-                TempData["ErrorMessage"] = "Không thể tải giỏ hàng.";
+                TempData["ErrorMessage"] = "Không thể tải giỏ hàng: " + ex.Message;
                 return RedirectToAction("Error", "Home");
             }
+
         }
 
         // Thêm sản phẩm vào giỏ

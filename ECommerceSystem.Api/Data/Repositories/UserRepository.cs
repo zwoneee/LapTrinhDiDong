@@ -66,7 +66,6 @@ namespace ECommerceSystem.Api.Data.Repositories
 
         public async Task CreateUserAsync(User user, string passwordHash)
         {
-            user.PasswordHash = passwordHash; // đã mã hóa ở nơi khác, ví dụ bằng BCrypt.Net
             await _dbContext.Users.AddAsync(user);
             await _dbContext.SaveChangesAsync();
         }

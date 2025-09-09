@@ -114,8 +114,28 @@ namespace ECommerceSystem.GUI.Controllers
                 }
 
                 _logger.LogInformation("Đăng ký thành công cho username: {Username}", model.UserName);
-                TempData["SuccessMessage"] = "Đăng ký thành công! Vui lòng đăng nhập.";
-                return RedirectToAction("Login");
+
+                // Tự động đăng nhập sau khi đăng ký
+                var (loginSuccess, role) = await _authService.LoginAsync(
+                    new LoginModel
+                    {
+                        Username = model.UserName,
+                        Password = model.Password
+                    });
+
+                if (loginSuccess)
+                {
+                    _logger.LogInformation("Tự động đăng nhập thành công cho username: {Username}", model.UserName);
+
+                    // Điều hướng về trang chủ
+                    return RedirectToAction("Index", "Home");
+                }
+                else
+                {
+                    _logger.LogWarning("Tự động đăng nhập thất bại cho username: {Username}", model.UserName);
+                    TempData["SuccessMessage"] = "Đăng ký thành công! Vui lòng đăng nhập.";
+                    return RedirectToAction("Login");
+                }
             }
             catch (Exception ex)
             {
@@ -124,6 +144,7 @@ namespace ECommerceSystem.GUI.Controllers
                 return View(model);
             }
         }
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]

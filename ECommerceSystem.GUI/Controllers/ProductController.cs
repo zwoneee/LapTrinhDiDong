@@ -24,9 +24,9 @@ namespace ECommerceSystem.GUI.Controllers
             _cache = cache;
         }
 
-        private async Task<object> GetCachedCategoriesAsync()
+        private async Task<List<CategoryDTO>> GetCachedCategoriesAsync()
         {
-            if (!_cache.TryGetValue(CategoriesCacheKey, out var categories))
+            if (!_cache.TryGetValue(CategoriesCacheKey, out List<CategoryDTO> categories))
             {
                 categories = await _categoryApi.GetAllAsync();
                 var cacheOptions = new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromHours(1));
@@ -39,15 +39,14 @@ namespace ECommerceSystem.GUI.Controllers
         {
             try
             {
-                var productsResponse = await _productApi.GetProductsAsync(searchTerm, categoryId, null, null, null, null, page, pageSize);
-                var products = productsResponse?.Products ?? new List<ProductDTO>();
-                var cachedCategories = await GetCachedCategoriesAsync() ?? new List<CategoryDTO>();
+                var response = await _productApi.GetProductsAsync(searchTerm, categoryId, null, null, null, null, page, pageSize);
+                var products = response?.Products ?? new List<ProductDTO>();
 
-                ViewBag.Categories = cachedCategories;
+                ViewBag.Categories = await GetCachedCategoriesAsync();
                 ViewBag.SearchTerm = searchTerm;
                 ViewBag.CategoryId = categoryId;
                 ViewBag.CurrentPage = page;
-                ViewBag.TotalPages = (int)Math.Ceiling((productsResponse?.Total ?? 0) / (double)pageSize);
+                ViewBag.TotalPages = (int)Math.Ceiling((response?.Total ?? 0) / (double)pageSize);
 
                 return View(products);
             }
@@ -65,10 +64,7 @@ namespace ECommerceSystem.GUI.Controllers
         public async Task<IActionResult> Create()
         {
             ViewBag.Categories = await GetCachedCategoriesAsync();
-            return View(new ProductFormModel
-            {
-                Product = new ProductDTO()
-            });
+            return View(new ProductFormModel { Product = new ProductDTO() });
         }
 
         [HttpPost]
@@ -86,10 +82,9 @@ namespace ECommerceSystem.GUI.Controllers
             if (form.ThumbnailFile != null && form.ThumbnailFile.Length > 0)
             {
                 var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-                if (!Directory.Exists(uploadsFolder))
-                    Directory.CreateDirectory(uploadsFolder);
+                if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
 
-                var fileName = Guid.NewGuid().ToString() + Path.GetExtension(form.ThumbnailFile.FileName);
+                var fileName = Guid.NewGuid() + Path.GetExtension(form.ThumbnailFile.FileName);
                 var filePath = Path.Combine(uploadsFolder, fileName);
 
                 using (var stream = new FileStream(filePath, FileMode.Create))
@@ -172,5 +167,47 @@ namespace ECommerceSystem.GUI.Controllers
                 return RedirectToAction(nameof(Index));
             }
         }
+        [HttpGet]
+        public async Task<IActionResult> Detail(int id)
+        {
+            try
+            {
+                var product = await _productApi.GetByIdAsync(id);
+                if (product == null)
+                {
+                    TempData["Error"] = "Không tìm thấy sản phẩm.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                // Lấy danh sách sản phẩm cùng danh mục
+                var relatedProductResponse = await _productApi.GetProductsAsync(
+                    search: null,
+                    categoryId: product.CategoryId,
+                    minPrice: null,
+                    maxPrice: null,
+                    sortBy: null,
+                    promotion: null,
+                    page: 1,
+                    pageSize: 10 // lấy 10 để lọc, có thể chọn top 4 sau
+                );
+
+                // Loại bỏ sản phẩm hiện tại ra khỏi danh sách liên quan
+                var relatedProducts = relatedProductResponse.Products
+                                        .Where(p => p.Id != product.Id)
+                                        .Take(4)
+                                        .ToList();
+
+                ViewBag.RelatedProducts = relatedProducts;
+                ViewBag.Categories = await GetCachedCategoriesAsync();
+
+                return View(product);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Lỗi khi tải chi tiết sản phẩm: {ex.Message}";
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
     }
 }
