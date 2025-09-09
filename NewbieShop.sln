@@ -3,11 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.35906.104
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ECommerceSystem.Api", "ECommerceSystem.Api\ECommerceSystem.Api.csproj", "{204268E5-1A23-400A-A04A-51208B87EFEE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewbieShop.Api", "ECommerceSystem.Api\NewbieShop.Api.csproj", "{204268E5-1A23-400A-A04A-51208B87EFEE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ECommerceSystem.Shared", "ECommerceSystem.Shared\ECommerceSystem.Shared.csproj", "{BEE1948E-FC61-4F29-A85A-6FC551AE5444}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewbieShop.Shared", "ECommerceSystem.Shared\NewbieShop.Shared.csproj", "{BEE1948E-FC61-4F29-A85A-6FC551AE5444}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ECommerceSystem.GUI", "ECommerceSystem.GUI\ECommerceSystem.GUI.csproj", "{C9E93134-BFC4-486E-8EAB-B094E17D4F71}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewbieShop.GUI", "ECommerceSystem.GUI\NewbieShop.GUI.csproj", "{C9E93134-BFC4-486E-8EAB-B094E17D4F71}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

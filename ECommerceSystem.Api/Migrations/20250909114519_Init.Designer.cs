@@ -8,10 +8,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace ECommerceSystem.Api.Migrations
+namespace NewbieShop.Api.Migrations
 {
     [DbContext(typeof(WebDBContext))]
-    [Migration("20250909031813_Init")]
+    [Migration("20250909114519_Init")]
     partial class Init
     {
         /// <inheritdoc />
