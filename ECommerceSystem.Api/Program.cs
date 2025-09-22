@@ -1,4 +1,5 @@
 using AspNetCoreRateLimit;
+using EcommerceSystem.API.Data.Repositories;
 using ECommerceSystem.Api.Data;
 using ECommerceSystem.Api.Data.Repositories;
 using ECommerceSystem.Api.Hubs;
@@ -133,6 +134,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<DataSyncService>();
+builder.Services.AddScoped<CommentRepository>();
 builder.Services.AddScoped<ICartRepository, CartRepository>();
 builder.Services.AddControllers();
 #endregion
