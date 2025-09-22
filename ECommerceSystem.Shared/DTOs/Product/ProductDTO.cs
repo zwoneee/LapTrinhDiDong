@@ -17,8 +17,8 @@ namespace ECommerceSystem.Shared.DTOs.Product
         public int CategoryId { get; set; }
         public float Rating { get; set; }
         public bool IsPromoted { get; set; }
-        public string QrCode { get; set; }
-        public string Slug { get; set; }
+        public string? QrCode { get; set; }
+        public string? Slug { get; set; }
     }
 }
 

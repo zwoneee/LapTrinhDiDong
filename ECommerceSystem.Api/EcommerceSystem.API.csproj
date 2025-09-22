@@ -37,7 +37,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ECommerceSystem.Shared\NewbieShop.Shared.csproj" />
+    <ProjectReference Include="..\ECommerceSystem.Shared\ECommerceSystem.Shared.csproj" />
   </ItemGroup>
 
 </Project>
