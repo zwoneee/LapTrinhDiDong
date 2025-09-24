@@ -22,7 +22,7 @@ namespace ECommerceSystem.Api.Data.Repositories
 
             return new UserDTO
             {
-                Id = user.Id.ToString(),
+                Id = user.Id,
                 Name = user.Name,
                 Email = user.Email,
                 DeviceToken = user.DeviceToken,
@@ -40,7 +40,7 @@ namespace ECommerceSystem.Api.Data.Repositories
 
             return (new UserDTO
             {
-                Id = user.Id.ToString(),
+                Id = user.Id,
                 Name = user.Name,
                 Email = user.Email,
                 DeviceToken = user.DeviceToken,
@@ -93,7 +93,7 @@ namespace ECommerceSystem.Api.Data.Repositories
                 .Where(u => !u.IsDeleted)
                 .Select(u => new UserDTO
                 {
-                    Id = u.Id.ToString(),
+                    Id = u.Id,
                     Email = u.Email,
                     Name = u.Name,
                     DeviceToken = u.DeviceToken,
@@ -102,14 +102,14 @@ namespace ECommerceSystem.Api.Data.Repositories
         }
 
         // Lấy thông tin người dùng theo ID
-        public async Task<UserDTO> GetByIdAsync(string id)
+        public async Task<UserDTO> GetByIdAsync(int id)
         {
-            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id.ToString() == id && !u.IsDeleted);
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted);
             if (user == null) return null;
 
             return new UserDTO
             {
-                Id = user.Id.ToString(),
+                Id = user.Id,
                 Email = user.Email,
                 Name = user.Name,
                 DeviceToken = user.DeviceToken,
@@ -118,10 +118,13 @@ namespace ECommerceSystem.Api.Data.Repositories
         }
 
         // Cập nhật thông tin người dùng
-        public async Task UpdateAsync(string id, UserDTO dto)
+        public async Task UpdateAsync(int id, UserDTO dto)
         {
-            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id.ToString() == id && !u.IsDeleted);
-            if (user == null) throw new Exception("Người dùng không tồn tại.");
+            var user = await _dbContext.Users
+                .FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted);
+
+            if (user == null)
+                throw new Exception("Người dùng không tồn tại.");
 
             user.Name = dto.Name;
             user.Email = dto.Email;
@@ -131,46 +134,50 @@ namespace ECommerceSystem.Api.Data.Repositories
         }
 
         // Xóa mềm (soft delete) người dùng
-        public async Task SoftDeleteAsync(string id)
+        public async Task SoftDeleteAsync(int id)
         {
-            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id.ToString() == id);
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id);
             if (user == null) throw new Exception("Người dùng không tồn tại.");
 
             user.IsDeleted = true;
             await _dbContext.SaveChangesAsync();
         }
+
         public async Task<List<UserDTO>> SearchByNameAsync(string name)
         {
             return await _dbContext.Users
                 .Where(u => u.Name.Contains(name) && !u.IsDeleted)
-                .Select(u => new UserDTO { Id = u.Id.ToString(), Name = u.Name, Email = u.Email, IsDeleted = u.IsDeleted })
+                .Select(u => new UserDTO
+                {
+                    Id = u.Id,
+                    Name = u.Name,
+                    Email = u.Email,
+                    IsDeleted = u.IsDeleted
+                })
                 .ToListAsync();
         }
 
-        public async Task SoftDeleteMultipleAsync(List<string> ids)
+        public async Task SoftDeleteMultipleAsync(List<int> ids)
         {
-            var users = await _dbContext.Users.Where(u => ids.Contains(u.Id.ToString())).ToListAsync();
+            var users = await _dbContext.Users.Where(u => ids.Contains(u.Id)).ToListAsync();
             foreach (var user in users)
                 user.IsDeleted = true;
 
             await _dbContext.SaveChangesAsync();
         }
-
     }
 
 
     public interface IUserService
     {
         Task<List<UserDTO>> GetAllAsync();
-        Task<UserDTO> GetByIdAsync(string id);
-        Task UpdateAsync(string id, UserDTO dto);
-        Task SoftDeleteAsync(string id);
-        Task CreateAsync(UserDTO dto); // Add this method to fix CS1061
+        Task<UserDTO> GetByIdAsync(int id);
+        Task UpdateAsync(int id, UserDTO dto);
+        Task SoftDeleteAsync(int id);
+        Task CreateAsync(UserDTO dto);
         Task<List<UserDTO>> SearchByNameAsync(string name);
-        Task SoftDeleteMultipleAsync(List<string> ids);
+        Task SoftDeleteMultipleAsync(List<int> ids);
     }
-
-
 
     public class UserService : IUserService
     {
@@ -185,7 +192,6 @@ namespace ECommerceSystem.Api.Data.Repositories
             // Implementation for creating a user
             var user = new User
             {
-                Id = int.Parse(dto.Id), // Assuming Id is a string representation of an integer
                 Email = dto.Email,
                 Name = dto.Name,
                 DeviceToken = dto.DeviceToken,
@@ -199,13 +205,13 @@ namespace ECommerceSystem.Api.Data.Repositories
 
         public Task<List<UserDTO>> GetAllAsync() => _userRepo.GetAllAsync();
 
-        public Task<UserDTO> GetByIdAsync(string id) => _userRepo.GetByIdAsync(id);
+        public Task<UserDTO> GetByIdAsync(int id) => _userRepo.GetByIdAsync(id);
 
-        public Task UpdateAsync(string id, UserDTO dto) => _userRepo.UpdateAsync(id, dto);
+        public Task UpdateAsync(int id, UserDTO dto) => _userRepo.UpdateAsync(id, dto);
 
-        public Task SoftDeleteAsync(string id) => _userRepo.SoftDeleteAsync(id);
+        public Task SoftDeleteAsync(int id) => _userRepo.SoftDeleteAsync(id);
         public Task<List<UserDTO>> SearchByNameAsync(string name) => _userRepo.SearchByNameAsync(name);
-        public Task SoftDeleteMultipleAsync(List<string> ids) => _userRepo.SoftDeleteMultipleAsync(ids);
+        public Task SoftDeleteMultipleAsync(List<int> ids) => _userRepo.SoftDeleteMultipleAsync(ids);
     }
 
 }

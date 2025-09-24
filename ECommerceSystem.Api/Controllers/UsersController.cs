@@ -36,7 +36,7 @@ namespace ECommerceSystem.Api.Controllers
         /// Lấy thông tin chi tiết của một người dùng theo ID
         /// </summary>
         [HttpGet("{id}")]
-        public async Task<ActionResult<UserDTO>> GetById(string id)
+        public async Task<ActionResult<UserDTO>> GetById(int id)
         {
             var user = await _userService.GetByIdAsync(id);
             if (user == null)
@@ -49,7 +49,7 @@ namespace ECommerceSystem.Api.Controllers
         /// Cập nhật thông tin người dùng
         /// </summary>
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(string id, [FromBody] UserDTO dto)
+        public async Task<IActionResult> Update(int id, [FromBody] UserDTO dto)
         {
             if (id != dto.Id)
                 return BadRequest("Id không khớp");
@@ -63,7 +63,7 @@ namespace ECommerceSystem.Api.Controllers
         /// Xóa mềm người dùng theo ID
         /// </summary>
         [HttpDelete("{id}")]
-        public async Task<IActionResult> SoftDelete(string id)
+        public async Task<IActionResult> SoftDelete(int id)
         {
             await _userService.SoftDeleteAsync(id);
             return NoContent();
@@ -96,7 +96,7 @@ namespace ECommerceSystem.Api.Controllers
         /// Xóa mềm nhiều người dùng cùng lúc theo danh sách ID
         /// </summary>
         [HttpPost("delete-multiple")]
-        public async Task<IActionResult> DeleteMultiple([FromBody] List<string> ids)
+        public async Task<IActionResult> DeleteMultiple([FromBody] List<int> ids)
         {
             await _userService.SoftDeleteMultipleAsync(ids);
             return NoContent(); // 204

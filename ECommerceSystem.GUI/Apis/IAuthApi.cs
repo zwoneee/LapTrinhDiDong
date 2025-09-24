@@ -53,21 +53,21 @@ namespace ECommerceSystem.GUI.Apis
         Task<List<UserDTO>> GetAllAsync();
 
         [Get("/api/admin/users/{id}")]
-        Task<UserDTO> GetByIdAsync(string id);
+        Task<UserDTO> GetByIdAsync(int id);
 
         [Post("/api/admin/users")]
         Task CreateAsync([Body] UserDTO dto);
 
         [Put("/api/admin/users/{id}")]
-        Task UpdateAsync(string id, [Body] UserDTO dto);
+        Task UpdateAsync(int id, [Body] UserDTO dto);
 
         [Delete("/api/admin/users/{id}")]
-        Task SoftDeleteAsync(string id);
+        Task SoftDeleteAsync(int id);
 
         [Post("/api/admin/users/delete-multiple")]
-        Task SoftDeleteMultipleAsync([Body] List<string> ids);
+        Task SoftDeleteMultipleAsync([Body] List<int> ids);
 
         [Get("/api/admin/users/search")]
-        Task<List<UserDTO>> SearchByNameAsync([Query] string name);
+        Task<List<UserDTO>> SearchByNameAsync(string name);
     }
 }

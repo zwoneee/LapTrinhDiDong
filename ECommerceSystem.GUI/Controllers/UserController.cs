@@ -22,7 +22,7 @@ namespace ECommerceSystem.GUI.Controllers
             return View(users);
         }
 
-        public async Task<IActionResult> Edit(string id)
+        public async Task<IActionResult> Edit(int id)
         {
             var user = await _userApi.GetByIdAsync(id);
             return View(user);
@@ -41,15 +41,26 @@ namespace ECommerceSystem.GUI.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Delete(string id)
+        public async Task<IActionResult> Delete(int id)
         {
             await _userApi.SoftDeleteAsync(id);
             return RedirectToAction("Index");
         }
-        public IActionResult Create()
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteMultiple(List<int> selectedIds)
         {
-            return View(new UserDTO());
+            if (selectedIds == null || !selectedIds.Any())
+            {
+                TempData["Error"] = "Vui lòng chọn ít nhất 1 người dùng để xóa.";
+                return RedirectToAction("Index");
+            }
+
+            await _userApi.SoftDeleteMultipleAsync(selectedIds);
+            return RedirectToAction("Index");
         }
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -66,19 +77,19 @@ namespace ECommerceSystem.GUI.Controllers
             var results = await _userApi.SearchByNameAsync(name);
             return View("Index", results);
         }
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteMultiple(List<string> selectedIds)
-        {
-            if (selectedIds == null || !selectedIds.Any())
-            {
-                TempData["Error"] = "Vui lòng chọn ít nhất 1 người dùng để xóa.";
-                return RedirectToAction("Index");
-            }
+        //[HttpPost]
+        //[ValidateAntiForgeryToken]
+        //public async Task<IActionResult> DeleteMultiple(List<string> selectedIds)
+        //{
+        //    if (selectedIds == null || !selectedIds.Any())
+        //    {
+        //        TempData["Error"] = "Vui lòng chọn ít nhất 1 người dùng để xóa.";
+        //        return RedirectToAction("Index");
+        //    }
 
-            await _userApi.SoftDeleteMultipleAsync(selectedIds);
-            return RedirectToAction("Index");
-        }
+        //    await _userApi.SoftDeleteMultipleAsync(selectedIds);
+        //    return RedirectToAction("Index");
+        //}
 
     }
 }
