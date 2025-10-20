@@ -5,6 +5,7 @@ using ECommerceSystem.Api.Data.Repositories;
 using ECommerceSystem.Api.Hubs;
 using ECommerceSystem.Api.Repositories;
 using ECommerceSystem.Api.Services;
+using ECommerceSystem.Api.Data.Repositories;
 using ECommerceSystem.Shared.Entities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +15,7 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-#region Swagger (OpenAPI)
+//#region Swagger (OpenAPI)
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -51,7 +52,7 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
-#endregion
+//#endregion
 
 #region Database & MongoDB
 builder.Services.AddDbContext<WebDBContext>(options =>
@@ -124,7 +125,7 @@ builder.Services.AddCors(options =>
         policy.WithOrigins("https://localhost:7068", "http://localhost:5088")
               .AllowAnyMethod()
               .AllowAnyHeader()
-              .AllowCredentials();
+              .AllowCredentials();  // Cho phép gửi cookie
     });
 });
 #endregion

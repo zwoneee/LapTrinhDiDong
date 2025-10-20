@@ -65,23 +65,27 @@
         <span asp-validation-for="Product.Stock" class="text-danger"></span>
     </div>
 
+    <!-- Loại bỏ trường Điểm đánh giá -->
+    <!--
     <div class="form-group mb-3">
         <label asp-for="Product.Rating" class="form-label">Điểm đánh giá</label>
         <input asp-for="Product.Rating" class="form-control" type="number" step="0.1" min="0" max="5" placeholder="Nhập điểm từ 0 đến 5" />
         <span asp-validation-for="Product.Rating" class="text-danger"></span>
     </div>
-
+    -->
+    
     <div class="form-group mb-3">
         <label asp-for="Product.QrCode" class="form-label">Mã QR</label>
         <input asp-for="Product.QrCode" class="form-control" placeholder="Nhập mã QR" />
         <span asp-validation-for="Product.QrCode" class="text-danger"></span>
     </div>
-
+   
     <div class="form-group mb-3">
         <label asp-for="Product.Slug" class="form-label">Slug</label>
         <input asp-for="Product.Slug" class="form-control" placeholder="Nhập slug (ví dụ: san-pham-1)" />
         <span asp-validation-for="Product.Slug" class="text-danger"></span>
     </div>
+    
 
     <div class="form-check mb-3">
         <input asp-for="Product.IsPromoted" class="form-check-input" />

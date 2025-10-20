@@ -9,7 +9,7 @@ namespace ECommerceSystem.Shared.Entities
         public string? ThumbnailUrl { get; set; }
         public int CategoryId { get; set; }
         public int Stock { get; set; }
-        public float Rating { get; set; }
+        public float? Rating { get; set; }
         public bool IsPromoted { get; set; }
         public string? QrCode { get; set; }
         public DateTime CreatedAt { get; set; }

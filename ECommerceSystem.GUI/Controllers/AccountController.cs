@@ -3,6 +3,7 @@ using ECommerceSystem.Shared.DTOs.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Refit;
 using System;
 using System.Threading.Tasks;
 
@@ -88,8 +89,10 @@ namespace ECommerceSystem.GUI.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Register(RegisterModel model)
         {
+            // Kiểm tra tính hợp lệ của dữ liệu đầu vào
             if (!ModelState.IsValid)
             {
+                // Log các lỗi nếu ModelState không hợp lệ
                 foreach (var entry in ModelState)
                 {
                     foreach (var error in entry.Value.Errors)
@@ -98,52 +101,64 @@ namespace ECommerceSystem.GUI.Controllers
                     }
                 }
 
+                // Thông báo lỗi nếu ModelState không hợp lệ
                 ViewBag.ErrorMessage = "Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.";
                 return View(model);
             }
 
             try
             {
+                // Gọi dịch vụ đăng ký người dùng
                 var success = await _authService.RegisterAsync(model);
 
                 if (!success)
                 {
+                    // Nếu đăng ký thất bại, log cảnh báo và hiển thị thông báo lỗi
                     _logger.LogWarning("Đăng ký thất bại cho username: {Username}", model.UserName);
                     ViewBag.ErrorMessage = "Đăng ký thất bại. Vui lòng thử lại.";
                     return View(model);
                 }
 
+                // Đăng ký thành công, log thông tin
                 _logger.LogInformation("Đăng ký thành công cho username: {Username}", model.UserName);
 
                 // Tự động đăng nhập sau khi đăng ký
-                var (loginSuccess, role) = await _authService.LoginAsync(
-                    new LoginModel
-                    {
-                        Username = model.UserName,
-                        Password = model.Password
-                    });
+                var (loginSuccess, role) = await _authService.LoginAsync(new LoginModel
+                {
+                    Username = model.UserName,
+                    Password = model.Password
+                });
 
                 if (loginSuccess)
                 {
+                    // Đăng nhập thành công, log thông tin và điều hướng về trang chủ
                     _logger.LogInformation("Tự động đăng nhập thành công cho username: {Username}", model.UserName);
-
-                    // Điều hướng về trang chủ
                     return RedirectToAction("Index", "Home");
                 }
                 else
                 {
+                    // Đăng nhập thất bại, log cảnh báo và yêu cầu người dùng đăng nhập thủ công
                     _logger.LogWarning("Tự động đăng nhập thất bại cho username: {Username}", model.UserName);
                     TempData["SuccessMessage"] = "Đăng ký thành công! Vui lòng đăng nhập.";
                     return RedirectToAction("Login");
                 }
             }
+            catch (ApiException apiEx)
+            {
+                // Xử lý lỗi từ API
+                _logger.LogError($"Lỗi API khi đăng ký cho username: {model.UserName}. Lỗi: {apiEx.Message}");
+                ViewBag.ErrorMessage = $"Lỗi khi tạo tài khoản từ API: {apiEx.Message}";
+                return View(model);
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi khi đăng ký cho username: {Username}", model.UserName);
+                // Xử lý lỗi bất thường
+                _logger.LogError($"Lỗi không xác định khi đăng ký cho username: {model.UserName}. Lỗi: {ex.Message}");
                 ViewBag.ErrorMessage = "Đã xảy ra lỗi khi đăng ký. Vui lòng thử lại sau.";
                 return View(model);
             }
         }
+
 
 
         [HttpPost]

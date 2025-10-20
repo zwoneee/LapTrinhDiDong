@@ -4,6 +4,7 @@ using ECommerceSystem.Shared.DTOs.Category;
 using ECommerceSystem.Shared.DTOs.Product;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
+using Refit;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -39,9 +40,11 @@ namespace ECommerceSystem.GUI.Controllers
         {
             try
             {
+                // Gọi API để lấy danh sách sản phẩm
                 var response = await _productApi.GetProductsAsync(searchTerm, categoryId, null, null, null, null, page, pageSize);
                 var products = response?.Products ?? new List<ProductDTO>();
 
+                // Đưa các thông tin vào ViewBag để sử dụng trong View
                 ViewBag.Categories = await GetCachedCategoriesAsync();
                 ViewBag.SearchTerm = searchTerm;
                 ViewBag.CategoryId = categoryId;
@@ -50,9 +53,17 @@ namespace ECommerceSystem.GUI.Controllers
 
                 return View(products);
             }
+            catch (ApiException apiEx)
+            {
+                TempData["Error"] = $"Lỗi khi tải sản phẩm từ API: {apiEx.Message}";
+                ViewBag.Categories = new List<CategoryDTO>();
+                ViewBag.CurrentPage = 1;
+                ViewBag.TotalPages = 1;
+                return View(new List<ProductDTO>());
+            }
             catch (Exception ex)
             {
-                TempData["Error"] = $"Lỗi khi tải danh sách sản phẩm: {ex.Message}";
+                TempData["Error"] = $"Lỗi không xác định: {ex.Message}";
                 ViewBag.Categories = new List<CategoryDTO>();
                 ViewBag.CurrentPage = 1;
                 ViewBag.TotalPages = 1;
@@ -79,8 +90,24 @@ namespace ECommerceSystem.GUI.Controllers
 
             var dto = form.Product;
 
+            // Nếu điểm đánh giá không được nhập, gán mặc định là 5
+            if (dto.Rating == null)
+            {
+                dto.Rating = 5;  // Gán điểm đánh giá mặc định là 5
+            }
+
+            // Kiểm tra tệp hình ảnh
             if (form.ThumbnailFile != null && form.ThumbnailFile.Length > 0)
             {
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png" };
+                var fileExtension = Path.GetExtension(form.ThumbnailFile.FileName).ToLower();
+                if (!allowedExtensions.Contains(fileExtension))
+                {
+                    TempData["Error"] = "Chỉ hỗ trợ tệp hình ảnh JPG, PNG.";
+                    ViewBag.Categories = await GetCachedCategoriesAsync();
+                    return View(form);
+                }
+
                 var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
                 if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
 
@@ -95,9 +122,27 @@ namespace ECommerceSystem.GUI.Controllers
                 dto.ThumbnailUrl = "/uploads/" + fileName;
             }
 
-            await _productApi.CreateAsync(dto);
-            TempData["Success"] = "Sản phẩm đã được tạo thành công!";
-            return RedirectToAction(nameof(Index));
+            try
+            {
+                // Tạo sản phẩm mới
+                await _productApi.CreateAsync(dto);
+
+                TempData["Success"] = "Sản phẩm đã được tạo thành công!";
+                // Sau khi tạo thành công, redirect về trang danh sách sản phẩm
+                return RedirectToAction(nameof(Index)); // Điều hướng về trang Index
+            }
+            catch (ApiException apiEx)
+            {
+                TempData["Error"] = $"Lỗi khi tạo sản phẩm từ API: {apiEx.Message}";
+                ViewBag.Categories = await GetCachedCategoriesAsync();
+                return View(form);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Lỗi không xác định: {ex.Message}";
+                ViewBag.Categories = await GetCachedCategoriesAsync();
+                return View(form);
+            }
         }
 
         [HttpGet]
@@ -157,16 +202,23 @@ namespace ECommerceSystem.GUI.Controllers
                     TempData["Error"] = "Sản phẩm không tồn tại.";
                     return RedirectToAction(nameof(Index));
                 }
+
                 await _productApi.DeleteAsync(id);
                 TempData["Success"] = "Sản phẩm đã được xóa thành công!";
                 return RedirectToAction(nameof(Index));
             }
+            catch (ApiException apiEx)
+            {
+                TempData["Error"] = $"Lỗi khi xóa sản phẩm từ API: {apiEx.Message}";
+                return RedirectToAction(nameof(Index));
+            }
             catch (Exception ex)
             {
-                TempData["Error"] = $"Lỗi khi xóa sản phẩm: {ex.Message}";
+                TempData["Error"] = $"Lỗi không xác định: {ex.Message}";
                 return RedirectToAction(nameof(Index));
             }
         }
+
         [HttpGet]
         public async Task<IActionResult> Detail(int id)
         {

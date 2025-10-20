@@ -1,6 +1,7 @@
 ﻿using ECommerceSystem.Api.Data;
 using ECommerceSystem.Shared.DTOs;
 using ECommerceSystem.Shared.DTOs.Product;
+using ECommerceSystem.Shared.DTOs.Product;
 using ECommerceSystem.Shared.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -25,10 +26,6 @@ namespace ECommerceSystem.Api.Controllers
             _cache = cache;
         }
 
-        /// <summary>
-        /// [GET] /api/public/products
-        /// Lấy danh sách sản phẩm (công khai)
-        /// </summary>
         [HttpGet]
         [AllowAnonymous]
         public async Task<IActionResult> GetProducts(
@@ -108,10 +105,6 @@ namespace ECommerceSystem.Api.Controllers
             return Ok(result);
         }
 
-        /// <summary>
-        /// [GET] /api/public/products/{id}
-        /// Lấy chi tiết sản phẩm theo ID (công khai)
-        /// </summary>
         [HttpGet("{id}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetById(int id)
@@ -140,42 +133,43 @@ namespace ECommerceSystem.Api.Controllers
             return Ok(product);
         }
 
-        /// <summary>
-        /// [POST] /api/public/products
-        /// Thêm sản phẩm mới (Admin)
-        /// </summary>
         [HttpPost]
         public async Task<IActionResult> AddProduct([FromBody] ProductDTO model)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var product = new Product
+            try
             {
-                Name = model.Name,
-                Price = model.Price,
-                Description = model.Description,
-                ThumbnailUrl = model.ThumbnailUrl,
-                CategoryId = model.CategoryId,
-                Stock = model.Stock,
-                Rating = model.Rating,
-                IsPromoted = model.IsPromoted,
-                QrCode = model.QrCode,
-                Slug = model.Slug,
-                CreatedAt = DateTime.UtcNow,
-                IsDeleted = false
-            };
+                var product = new Product
+                {
+                    Name = model.Name,
+                    Price = model.Price,
+                    Description = model.Description,
+                    ThumbnailUrl = model.ThumbnailUrl,
+                    CategoryId = model.CategoryId,
+                    Stock = model.Stock,
+                    Rating = model.Rating,
+                    IsPromoted = model.IsPromoted,
+                    QrCode = model.QrCode,
+                    Slug = model.Slug,
+                    CreatedAt = DateTime.UtcNow,
+                    IsDeleted = false
+                };
 
-            _dbContext.Products.Add(product);
-            await _dbContext.SaveChangesAsync();
+                _dbContext.Products.Add(product);
+                await _dbContext.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
+                return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
+            }
+            catch (Exception ex)
+            {
+                // Ghi log lỗi chi tiết
+                Console.WriteLine("Lỗi khi thêm sản phẩm: " + ex.ToString());
+                return StatusCode(500, $"Lỗi server: {ex.Message}");
+            }
         }
 
-        /// <summary>
-        /// [PUT] /api/public/products/{id}
-        /// Cập nhật sản phẩm (Admin)
-        /// </summary>
         [HttpPut("{id}")]
         public async Task<IActionResult> EditProduct(int id, [FromBody] ProductDTO model)
         {
@@ -192,7 +186,7 @@ namespace ECommerceSystem.Api.Controllers
             product.ThumbnailUrl = model.ThumbnailUrl;
             product.CategoryId = model.CategoryId;
             product.Stock = model.Stock;
-            product.Rating = model.Rating;
+            product.Rating = model.Rating ?? 0f;
             product.IsPromoted = model.IsPromoted;
             product.QrCode = model.QrCode;
             product.Slug = model.Slug;
@@ -203,10 +197,6 @@ namespace ECommerceSystem.Api.Controllers
             return Ok(product);
         }
 
-        /// <summary>
-        /// [DELETE] /api/public/products/{id}
-        /// Xóa mềm sản phẩm (Admin)
-        /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProduct(int id)
         {

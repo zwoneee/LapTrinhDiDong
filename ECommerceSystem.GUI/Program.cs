@@ -1,6 +1,5 @@
 ﻿using ECommerceSystem.GUI.Apis;
 using ECommerceSystem.GUI.Services;
-using ECommerceSystem.GUI.Services.ECommerceSystem.GUI.Handlers;
 using ECommerceSystem.Shared.Constants;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -80,32 +79,26 @@ static void ConfigureRefit(IServiceCollection services)
         }
     }
 
-    // 👇 Updated to use a lambda to wrap the method group
-    services.AddRefitClient<IAuthApi>()
-        .AddHttpMessageHandler<AuthRetryHandler>()
-        .ConfigureHttpClient((sp, client) => SetHttpClient(client, sp));
-
-    services.AddRefitClient<IOrderApi>()
-        .AddHttpMessageHandler<AuthRetryHandler>()
-        .ConfigureHttpClient((sp, client) => SetHttpClient(client, sp));
-
-    services.AddRefitClient<ICategoryApi>()
-        .AddHttpMessageHandler<AuthRetryHandler>()
-        .ConfigureHttpClient((sp, client) => SetHttpClient(client, sp));
-
     services.AddRefitClient<IProductApi>()
         .AddHttpMessageHandler<AuthRetryHandler>()
         .ConfigureHttpClient((sp, client) => SetHttpClient(client, sp));
-
-    services.AddRefitClient<ICartApi>()
+    services.AddRefitClient<IAuthApi>()
         .AddHttpMessageHandler<AuthRetryHandler>()
         .ConfigureHttpClient((sp, client) => SetHttpClient(client, sp));
-
+    services.AddRefitClient<ICategoryApi>()
+        .AddHttpMessageHandler<AuthRetryHandler>()
+        .ConfigureHttpClient((sp, client) => SetHttpClient(client, sp));
+    services.AddRefitClient<IOrderApi>()
+        .AddHttpMessageHandler<AuthRetryHandler>()
+        .ConfigureHttpClient((sp, client) => SetHttpClient(client, sp));
     services.AddRefitClient<IUserApi>()
         .AddHttpMessageHandler<AuthRetryHandler>()
         .ConfigureHttpClient((sp, client) => SetHttpClient(client, sp));
-
+    services.AddRefitClient<ICartApi>()
+        .AddHttpMessageHandler<AuthRetryHandler>()
+        .ConfigureHttpClient((sp, client) => SetHttpClient(client, sp));
     services.AddRefitClient<IAdminApi>()
         .AddHttpMessageHandler<AuthRetryHandler>()
         .ConfigureHttpClient((sp, client) => SetHttpClient(client, sp));
+
 }
