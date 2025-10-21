@@ -8,6 +8,8 @@ using Refit;
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
+using System.Linq;
 
 namespace ECommerceSystem.GUI.Controllers
 {
@@ -252,6 +254,26 @@ namespace ECommerceSystem.GUI.Controllers
                 ViewBag.RelatedProducts = relatedProducts;
                 ViewBag.Categories = await GetCachedCategoriesAsync();
 
+                // NEW: nếu user đã đăng nhập, gọi API để lấy rating của user cho product này
+                if (User.Identity?.IsAuthenticated == true)
+                {
+                    try
+                    {
+                        var userRating = await _productApi.GetUserRatingAsync(id);
+                        // userRating.Value có thể null nếu chưa đánh giá
+                        ViewBag.UserRating = userRating?.Value;
+                    }
+                    catch
+                    {
+                        // Nếu lỗi (ví dụ token), ignore và hiển thị như không có rating của user
+                        ViewBag.UserRating = null;
+                    }
+                }
+                else
+                {
+                    ViewBag.UserRating = null;
+                }
+
                 return View(product);
             }
             catch (Exception ex)
@@ -261,5 +283,33 @@ namespace ECommerceSystem.GUI.Controllers
             }
         }
 
+        public class RatingViewModel
+        {
+            public int ProductId { get; set; }
+            public int Value { get; set; }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Rate([FromBody] RatingViewModel model)
+        {
+            if (model == null || model.Value < 1 || model.Value > 5)
+                return BadRequest(new { success = false, message = "Giá trị rating không hợp lệ" });
+
+            try
+            {
+                // Gọi API bằng Refit client đã cấu hình (Auth token sẽ được đính kèm theo HttpClient trong Program.cs)
+                await _productApi.RateProductAsync(model.ProductId, new RatingRequest { Value = model.Value });
+                return Ok(new { success = true });
+            }
+            catch (ApiException apiEx)
+            {
+                return StatusCode((int)apiEx.StatusCode, new { success = false, message = apiEx.Content });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
     }
 }

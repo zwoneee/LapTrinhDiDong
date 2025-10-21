@@ -3,6 +3,7 @@ using ECommerceSystem.Shared.DTOs.Models;
 using ECommerceSystem.Shared.DTOs.Product;
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace ECommerceSystem.GUI.Controllers
 {
@@ -50,6 +51,22 @@ namespace ECommerceSystem.GUI.Controllers
             {
                 TempData["ErrorMessage"] = "Không thể thêm sản phẩm.";
                 return RedirectToAction("Index");
+            }
+        }
+
+        // Trả về tổng số lượng item trong giỏ (JSON) để client cập nhật badge
+        [HttpGet]
+        public async Task<IActionResult> Count()
+        {
+            try
+            {
+                var cart = await _cartApi.GetCart();
+                var count = cart?.Items?.Sum(i => i.Quantity) ?? 0;
+                return Json(new { count });
+            }
+            catch
+            {
+                return Json(new { count = 0 });
             }
         }
 

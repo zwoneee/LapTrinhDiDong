@@ -7,6 +7,10 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+    @* Cho phép view định nghĩa section Styles *@
+    @await RenderSectionAsync("Styles", required: false)
+
     <style>
         :root {
             --primary-color: #2563eb;
@@ -291,9 +295,6 @@
             animation: spin 1s linear infinite;
         }
 
-        <<<<<<< HEAD
-
-                ======= > > > > > > > 4273d6e7db21b69a39d2d2c97c21c7d6d841d88f
         /* Main Content */
         .main-content {
             min-height: calc(100vh - 200px);
@@ -356,11 +357,6 @@
             border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        <<<<<<< HEAD
-
-
-
-                ======= > > > > > > > 4273d6e7db21b69a39d2d2c97c21c7d6d841d88f
         /* Utility Classes */
         .btn-modern {
             background: var(--primary-color);
@@ -423,7 +419,7 @@
                             <a asp-controller="Cart" asp-action="Index" class="header-action cart">
                                 <i class="fas fa-shopping-cart"></i>
                                 <span>Giỏ hàng</span>
-                                <span class="badge bg-danger ms-1">0</span>
+                                <span id="cart-count-badge" class="badge bg-danger ms-1">0</span>
                             </a>
                         </div>
 
@@ -494,6 +490,26 @@
             $('#toggle-category').on('click', function () {
                 $('.nav-menu').slideToggle();
             });
+
+            // Hàm cập nhật số trong badge
+            function updateCartCount() {
+                $.getJSON('/Cart/Count')
+                    .done(function (data) {
+                        if (data && typeof data.count !== 'undefined') {
+                            $('#cart-count-badge').text(data.count);
+                        }
+                    })
+                    .fail(function () {
+                        // nếu lỗi thì giữ nguyên hoặc set 0
+                        $('#cart-count-badge').text('0');
+                    });
+            }
+
+            // Gọi lần đầu khi load
+            updateCartCount();
+
+            // Tuỳ chọn: cập nhật định kỳ (ví dụ mỗi 30s)
+            setInterval(updateCartCount, 30000);
         });
     </script>
 

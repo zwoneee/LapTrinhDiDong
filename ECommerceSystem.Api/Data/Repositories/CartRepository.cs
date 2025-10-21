@@ -160,9 +160,6 @@ namespace ECommerceSystem.Api.Repositories
             }
         }
 
-        /// <summary>
-        /// Lấy UserId từ JWT Token
-        /// </summary>
         private int GetUserId()
         {
             var principal = _httpContextAccessor.HttpContext?.User;
@@ -228,9 +225,6 @@ namespace ECommerceSystem.Api.Repositories
                 throw;
             }
         }
-
-
-
 
         private async Task<CartDTO> BuildCartDTO(int userId)
         {

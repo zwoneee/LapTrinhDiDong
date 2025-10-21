@@ -28,5 +28,13 @@ namespace ECommerceSystem.GUI.Apis
 
         [Delete("/api/public/products/{id}")]
         Task DeleteAsync(int id);
+
+        // Gọi API rating (gọi endpoint api/user/products/{id}/rate)
+        [Post("/api/user/products/{id}/rate")]
+        Task RateProductAsync(int id, [Body] RatingRequest request);
+
+        // Lấy rating của user hiện tại cho sản phẩm (yêu cầu auth)
+        [Get("/api/user/products/{id}/rating")]
+        Task<RatingResponse> GetUserRatingAsync(int id);
     }
 }

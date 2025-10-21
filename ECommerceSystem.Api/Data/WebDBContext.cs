@@ -16,10 +16,11 @@ public class WebDBContext : DbContext
     public DbSet<Role> Roles { get; set; }
     public DbSet<PaymentReceipt> PaymentReceipts { get; set; }
 
-
     public DbSet<ShoppingCart> ShoppingCarts { get; set; }
     public DbSet<CartDetail> CartDetails { get; set; }
     public DbSet<Comment> Comments { get; set; }
+
+    public DbSet<ProductRating> ProductRatings { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -52,6 +53,16 @@ public class WebDBContext : DbContext
             .HasForeignKey(d => d.ProductId)
             .OnDelete(DeleteBehavior.Restrict)
             .IsRequired(false);
+
+        // ProductRating relationship
+        modelBuilder.Entity<ProductRating>()
+            .HasOne(r => r.Product)
+            .WithMany()
+            .HasForeignKey(r => r.ProductId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ProductRating>()
+            .HasIndex(r => r.ProductId);
 
         // ✅ Soft delete filters
         modelBuilder.Entity<User>().HasQueryFilter(e => !e.IsDeleted);

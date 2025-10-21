@@ -363,9 +363,11 @@
                                              alt="@product.Name"
                                              onerror="this.src='/images/default-product.jpg'" />
                                         <div class="product-overlay">
-                                            <button class="quick-view-btn" onclick="quickView(@product.Id)">
-                                                <i class="fas fa-eye me-2"></i>Xem chi tiết
-                                            </button>
+                                            <div class="product-overlay">
+                                                <a href="@Url.Action("Detail", "Product", new { id = product.Id })" class="quick-view-btn">
+                                                    <i class="fas fa-eye me-2"></i>Xem chi tiết
+                                                </a>
+                                            </div>
                                         </div>
                                     </div>
 

@@ -1,7 +1,6 @@
 ﻿using ECommerceSystem.Api.Data;
 using ECommerceSystem.Shared.DTOs;
 using ECommerceSystem.Shared.DTOs.Product;
-using ECommerceSystem.Shared.DTOs.Product;
 using ECommerceSystem.Shared.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -30,7 +29,7 @@ namespace ECommerceSystem.Api.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> GetProducts(
             string? search,
-            string? categoryIdString,
+            string? categoryId, // Đổi tên để khớp với query param "categoryId"
             decimal? minPrice,
             decimal? maxPrice,
             string? sortBy,
@@ -38,7 +37,7 @@ namespace ECommerceSystem.Api.Controllers
             int page = 1,
             int pageSize = 10)
         {
-            var cacheKey = $"products_{search}_{categoryIdString}_{minPrice}_{maxPrice}_{sortBy}_{promotion}_{page}_{pageSize}";
+            var cacheKey = $"products_{search}_{categoryId}_{minPrice}_{maxPrice}_{sortBy}_{promotion}_{page}_{pageSize}";
             var cachedResult = await _cache.GetStringAsync(cacheKey);
 
             if (!string.IsNullOrEmpty(cachedResult))
@@ -49,8 +48,9 @@ namespace ECommerceSystem.Api.Controllers
             if (!string.IsNullOrEmpty(search))
                 query = query.Where(p => p.Name.Contains(search) || p.Description.Contains(search));
 
-            if (!string.IsNullOrEmpty(categoryIdString) && int.TryParse(categoryIdString, out int categoryId))
-                query = query.Where(p => p.CategoryId == categoryId);
+            // Sử dụng categoryId (string) đã truyền từ client, parse sang int nếu hợp lệ
+            if (!string.IsNullOrEmpty(categoryId) && int.TryParse(categoryId, out int parsedCategoryId))
+                query = query.Where(p => p.CategoryId == parsedCategoryId);
 
             if (minPrice.HasValue)
                 query = query.Where(p => p.Price >= minPrice);
