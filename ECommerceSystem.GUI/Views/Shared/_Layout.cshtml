@@ -1,4 +1,7 @@
-﻿<!DOCTYPE html>
+﻿@using ECommerceSystem.Shared.Entities
+@using ECommerceSystem.Shared.DTOs.Category
+
+<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="utf-8" />
@@ -19,24 +22,16 @@
             --light-color: #f8fafc;
             --text-color: #334155;
             --border-color: #e2e8f0;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.1),0 2px 4px -1px rgba(0,0,0,0.06);
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana,sans-serif;
             line-height: 1.6;
             color: var(--text-color);
-            background-color: #ffffff;
+            background-color: #fff;
         }
 
-        /* Header Styles */
         .header-container {
             position: sticky;
             top: 0;
@@ -70,10 +65,9 @@
             transition: all 0.3s ease;
         }
 
-            .logo:hover {
-                color: var(--primary-color);
-                transform: scale(1.05);
-            }
+        .logo:hover {
+            transform: scale(1.05);
+        }
 
         .search-container {
             position: relative;
@@ -92,12 +86,12 @@
             background: var(--light-color);
         }
 
-            .search-input:focus {
-                outline: none;
-                border-color: var(--primary-color);
-                box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-                background: white;
-            }
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+            background: white;
+        }
 
         .search-icon {
             position: absolute;
@@ -124,28 +118,27 @@
             color: var(--text-color);
             transition: all 0.3s ease;
             font-weight: 500;
-            white-space: nowrap;
         }
 
-            .header-action:hover {
-                background: var(--light-color);
-                color: var(--primary-color);
-                transform: translateY(-1px);
-            }
+        .header-action:hover {
+            background: var(--light-color);
+            color: var(--primary-color);
+            transform: translateY(-1px);
+        }
 
-            .header-action.cart {
-                background: var(--primary-color);
-                color: white;
-                border-radius: 25px;
-                padding: 10px 20px;
-            }
+        .header-action.cart {
+            background: var(--primary-color);
+            color: white;
+            border-radius: 25px;
+            padding: 10px 20px;
+        }
 
-                .header-action.cart:hover {
-                    background: #1d4ed8;
-                    color: white;
-                    transform: translateY(-2px);
-                    box-shadow: var(--shadow);
-                }
+        .header-action.cart:hover {
+            background: #1d4ed8;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
 
         .auth-section {
             display: flex;
@@ -160,16 +153,14 @@
             border-radius: 8px;
             text-decoration: none;
             font-weight: 600;
-            transition: all 0.3s ease;
             border: none;
         }
 
-            .login-btn:hover {
-                background: #1d4ed8;
-                color: white;
-                transform: translateY(-1px);
-                box-shadow: var(--shadow);
-            }
+        .login-btn:hover {
+            background: #1d4ed8;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow);
+        }
 
         .logout-btn {
             background: transparent;
@@ -177,44 +168,33 @@
             padding: 8px 16px;
             border-radius: 6px;
             border: 1px solid var(--border-color);
-            text-decoration: none;
             font-weight: 500;
-            transition: all 0.3s ease;
         }
 
-            .logout-btn:hover {
-                background: #fee2e2;
-                border-color: #fca5a5;
-                color: #dc2626;
-            }
+        .logout-btn:hover {
+            background: #fee2e2;
+            border-color: #fca5a5;
+            color: #dc2626;
+        }
 
         .user-greeting {
-            color: var(--text-color);
             font-weight: 600;
+            color: var(--text-color);
         }
 
-        /* Navigation Menu */
         .nav-menu {
             background: var(--dark-color);
             padding: 0;
             position: relative;
         }
 
-            .nav-menu::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                height: 1px;
-                background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            }
-
         .nav-container {
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 0;
+            flex-wrap: wrap;
+            gap: 0.5rem;
         }
 
         .nav-item {
@@ -234,42 +214,27 @@
             overflow: hidden;
         }
 
-            .nav-link::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: -100%;
-                width: 100%;
-                height: 100%;
-                background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-                transition: left 0.5s ease;
-            }
+        .nav-link:hover {
+            color: var(--secondary-color);
+            background: rgba(245, 158, 11, 0.1);
+            transform: translateY(-2px);
+        }
 
-            .nav-link:hover::before {
-                left: 100%;
-            }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 3px;
+            background: var(--secondary-color);
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
+        }
 
-            .nav-link:hover {
-                color: var(--secondary-color);
-                background: rgba(245, 158, 11, 0.1);
-                transform: translateY(-2px);
-            }
-
-            .nav-link::after {
-                content: '';
-                position: absolute;
-                bottom: 0;
-                left: 50%;
-                width: 0;
-                height: 3px;
-                background: var(--secondary-color);
-                transition: all 0.3s ease;
-                transform: translateX(-50%);
-            }
-
-            .nav-link:hover::after {
-                width: 80%;
-            }
+        .nav-link:hover::after {
+            width: 80%;
+        }
 
         /* Loading Animation */
         .loading-overlay {
@@ -319,15 +284,15 @@
             position: relative;
         }
 
-            .footer-section h5::after {
-                content: '';
-                position: absolute;
-                bottom: -5px;
-                left: 0;
-                width: 30px;
-                height: 2px;
-                background: var(--secondary-color);
-            }
+        .footer-section h5::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 30px;
+            height: 2px;
+            background: var(--secondary-color);
+        }
 
         .footer-link {
             color: #cbd5e1;
@@ -337,10 +302,10 @@
             transition: all 0.3s ease;
         }
 
-            .footer-link:hover {
-                color: var(--secondary-color);
-                padding-left: 0.5rem;
-            }
+        .footer-link:hover {
+            color: var(--secondary-color);
+            padding-left: 0.5rem;
+        }
 
         .footer-contact {
             display: flex;
@@ -377,75 +342,44 @@
     </style>
 </head>
 <body>
+    <!-- HEADER -->
     <div class="header-container">
         <div class="top-announcement">
             <div class="container text-white text-center py-2 bg-primary">
                 <i class="fas fa-shipping-fast me-2"></i>Miễn phí vận chuyển cho đơn hàng trên 500k
             </div>
         </div>
-
         <div class="main-header">
-            <div class="container">
-                <div class="d-flex align-items-center justify-content-between flex-wrap">
-                    <div class="d-flex align-items-center mb-2 mb-md-0">
-                        <button id="toggle-category" class="btn btn-modern me-3">
-                            <i class="fas fa-bars"></i> Danh mục
-                        </button>
-                        <a class="logo" asp-controller="Home" asp-action="Index">
-                            <i class="fas fa-store me-2"></i>
-                            <span>ECommerce</span>
-                        </a>
+            <div class="container d-flex align-items-center justify-content-between flex-wrap">
+                <div class="d-flex align-items-center mb-2 mb-md-0">
+                    <button id="toggle-category" class="btn btn-modern me-3"><i class="fas fa-bars"></i> Danh mục</button>
+                    <a class="logo" asp-controller="Home" asp-action="Index"><i class="fas fa-store me-2"></i>ECommerce</a>
+                </div>
+                <div class="search-container flex-grow-1 mx-3">
+                    <i class="fas fa-search search-icon"></i>
+                    <input class="search-input" type="text" placeholder="Tìm kiếm sản phẩm, thương hiệu..." />
+                </div>
+                <div class="d-flex align-items-center flex-wrap gap-3">
+                    <div class="header-actions">
+                        <a href="#" class="header-action"><i class="fas fa-phone"></i> <span class="d-none d-md-inline">1800.2097</span></a>
+                        <a href="#" class="header-action"><i class="fas fa-map-marker-alt"></i> <span class="d-none d-md-inline">Cửa hàng</span></a>
+                        <a href="#" class="header-action"><i class="fas fa-truck"></i> <span class="d-none d-md-inline">Tra cứu</span></a>
+                        <a asp-controller="Cart" asp-action="Index" class="header-action cart"><i class="fas fa-shopping-cart"></i> <span class="d-none d-md-inline">Giỏ hàng</span> <span id="cart-count-badge" class="badge bg-danger ms-1">0</span></a>
                     </div>
 
-                    <div class="search-container flex-grow-1 mx-3">
-                        <i class="fas fa-search search-icon"></i>
-                        <input class="search-input" type="text" placeholder="Tìm kiếm sản phẩm, thương hiệu...">
-                    </div>
-
-                    <div class="d-flex align-items-center flex-wrap gap-3">
-                        <div class="header-actions">
-                            <a href="#" class="header-action">
-                                <i class="fas fa-phone"></i>
-                                <span class="d-none d-md-inline">1800.2097</span>
-                            </a>
-                            <a href="#" class="header-action">
-                                <i class="fas fa-map-marker-alt"></i>
-                                <span class="d-none d-md-inline">Cửa hàng</span>
-                            </a>
-                            <a href="#" class="header-action">
-                                <i class="fas fa-truck"></i>
-                                <span class="d-none d-md-inline">Tra cứu</span>
-                            </a>
-                            <a asp-controller="Cart" asp-action="Index" class="header-action cart">
-                                <i class="fas fa-shopping-cart"></i>
-                                <span>Giỏ hàng</span>
-                                <span id="cart-count-badge" class="badge bg-danger ms-1">0</span>
-                            </a>
-                        </div>
-
-                        <div class="auth-section">
-                            @if (User.Identity.IsAuthenticated)
-                                                        {
-                            <span class="user-greeting">
-                                <i class="fas fa-user-circle me-1"></i>
-                                Xin chào, @User.Identity.Name
-                            </span>
-                            <form asp-action="Logout" asp-controller="Account" method="post" style="display: inline;">
+                    <div class="auth-section">
+                        @if (User.Identity.IsAuthenticated)
+                        {
+                            <span class="user-greeting"><i class="fas fa-user-circle me-1"></i>Xin chào, @User.Identity.Name</span>
+                            <form asp-action="Logout" asp-controller="Account" method="post" style="display:inline;">
                                 @Html.AntiForgeryToken()
-                                <button type="submit" class="logout-btn">
-                                    <i class="fas fa-sign-out-alt me-1"></i>
-                                    Đăng xuất
-                                </button>
+                                <button type="submit" class="logout-btn"><i class="fas fa-sign-out-alt me-1"></i>Đăng xuất</button>
                             </form>
-                                                        }
-                                                        else
-                            {
-                                <a class="login-btn" asp-controller="Account" asp-action="Login">
-                                    <i class="fas fa-user me-1"></i>
-                                    Đăng nhập
-                                </a>
-                            }
-                        </div>
+                        }
+                        else
+                        {
+                            <a class="login-btn" asp-controller="Account" asp-action="Login"><i class="fas fa-user me-1"></i>Đăng nhập</a>
+                        }
                     </div>
                 </div>
             </div>
@@ -453,42 +387,84 @@
 
         <!-- DANH MỤC -->
         <nav class="nav-menu">
-            <div class="container">
-                <div class="nav-container d-flex flex-wrap gap-3">
-                    @{
-                        var selectedCategoryId = ViewBag.SelectedCategoryId as int?;
-                        var categories = ViewBag.Categories as List<ECommerceSystem.Shared.DTOs.Category.CategoryDTO>;
-                    }
-
-                    @if (categories != null)
+            <div class="container nav-container">
+                @{
+                    var selectedCategoryId = ViewBag.SelectedCategoryId as int?;
+                    var categories = ViewBag.Categories as List<CategoryDTO>;
+                }
+                @if (categories != null)
+                {
+                    foreach (var category in categories)
                     {
-                        foreach (var category in categories)
-                        {
-                            <div class="nav-item">
-                                <a href="@Url.Action("Index", "Home", new { categoryId = category.Id })"
-                                   class="nav-link @(selectedCategoryId == category.Id ? "active-category" : "")">
-                                    <i class="fas fa-tag"></i> @category.Name
-                                </a>
-                            </div>
-                        }
+                        <div class="nav-item">
+                            <a href="@Url.Action("Index", "Home", new { categoryId = category.Id })" class="nav-link @(selectedCategoryId == category.Id ? "active-category" : "")">
+                                <i class="fas fa-tag"></i> @category.Name
+                            </a>
+                        </div>
                     }
-                </div>
+                }
             </div>
         </nav>
     </div>
 
+    <!-- HEADER, MENU,... -->
+
     <div class="container">
-        <main role="main" class="main-content">
+        <main class="main-content" role="main">
             @RenderBody()
         </main>
     </div>
 
+    <!-- ✅ Chỉ hiện khi là user đăng nhập (không phải admin) -->
+    @{
+        var isAuthenticated = User.Identity.IsAuthenticated;
+        var isAdmin = User.IsInRole("Admin");
+    }
+
+    @if (isAuthenticated && !isAdmin)
+    {
+        @Html.Partial("_UserChatPartial")
+    }
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+
     <script>
-        $(document).ready(function () {
-            $('#toggle-category').on('click', function () {
-                $('.nav-menu').slideToggle();
+        window.currentUser = {
+            id: '@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value',
+            name: '@User.Identity?.Name',
+            role: '@(User.IsInRole("Admin") ? "Admin" : "User")'
+        };
+        console.log("👤 currentUser =", window.currentUser);
+    </script>
+
+    <script src="~/js/chat.js"></script>
+
+
+    @RenderSection("Scripts", required: false)
+
+    <script>
+        $(document).ready(function(){
+            console.log("💬 Chat bubble ready");
+
+            $("#chatBubble").on("click", function(){
+                const $container = $("#userChatContainer");
+
+                if (!$container.hasClass("loaded")) {
+                    console.log("📡 Loading /User/UserChat...");
+                    $container.load("/User/UserChat", function (response, status) {
+                        if (status === "success") {
+                            console.log("💬 UserChat view loaded thành công");
+                            initUserChat();
+                            $container.addClass("loaded"); // ✅ Đánh dấu chỉ load 1 lần
+                        } else {
+                            console.error("❌ Lỗi khi load /User/UserChat:", status);
+                        }
+                    });
+                } else {
+                    // ✅ Nếu đã load rồi thì chỉ toggle hiển thị
+                    $container.toggle();
+                }
             });
 
             // Hàm cập nhật số trong badge
@@ -513,16 +489,6 @@
         });
     </script>
 
-    <style>
-        .nav-link.active-category {
-            font-weight: bold;
-            color: #fff !important;
-            background-color: #0d6efd;
-            border-radius: 6px;
-            padding: 5px 10px;
-        }
-    </style>
 
-    @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

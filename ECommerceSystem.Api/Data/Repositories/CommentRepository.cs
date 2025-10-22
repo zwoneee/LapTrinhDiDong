@@ -1,5 +1,7 @@
 ﻿using ECommerceSystem.Shared.Entities;
 using Microsoft.EntityFrameworkCore;
+using ECommerceSystem.Api.Data;
+    
 
 namespace EcommerceSystem.API.Data.Repositories
 {

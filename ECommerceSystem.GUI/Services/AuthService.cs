@@ -19,29 +19,31 @@ public class AuthService
     {
         _authApi = authApi;
         _httpContextAccessor = httpContextAccessor;
-        _logger = logger;  // <-- gán
+        _logger = logger;
     }
 
-    public async Task<(bool Success, string Role)> LoginAsync(LoginModel model)
+    // Login
+    public async Task<(bool success, string role, string token)> LoginAsync(LoginModel model)
     {
         try
         {
-            var response = await _authApi.Login(model);
+            var response = await _authApi.Login(model); // API trả về { Token, User }
 
-            if (!string.IsNullOrWhiteSpace(response.Token))
+            if (string.IsNullOrEmpty(response?.Token))
+                return (false, null, null);
+
+            var token = response.Token;
+
+            SaveTokenToCookie(token); // Lưu vào cookie nếu muốn
+
+            // Decode JWT lấy role
+            var handler = new JwtSecurityTokenHandler();
+            var jwtToken = handler.ReadToken(token) as JwtSecurityToken;
+            var role = jwtToken?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
+
+            // Tạo ClaimsPrincipal để MVC nhận diện user
+            if (jwtToken != null)
             {
-                SaveTokenToCookie(response.Token);
-
-                var handler = new JwtSecurityTokenHandler();
-                var jwtToken = handler.ReadToken(response.Token) as JwtSecurityToken;
-
-                if (jwtToken == null)
-                {
-                    return (false, null); // Token không hợp lệ
-                }
-
-                var role = jwtToken?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
-
                 var claimsIdentity = new ClaimsIdentity(jwtToken.Claims, CookieAuthenticationDefaults.AuthenticationScheme);
                 var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
 
@@ -53,39 +55,61 @@ public class AuthService
                         IsPersistent = true,
                         ExpiresUtc = DateTimeOffset.UtcNow.AddHours(1)
                     });
-
-                return (true, role);
             }
 
-            return (false, null);
+            return (true, role ?? "", token);
         }
         catch (ApiException ex)
         {
-            _logger.LogError("Login failed: {Message}", ex.Message);
-            return (false, null);
+            _logger.LogError(ex, "API login thất bại");
+            return (false, null, null);
         }
     }
 
+    // Register
     public async Task<bool> RegisterAsync(RegisterModel model)
     {
         try
         {
             var response = await _authApi.Register(model);
-            if (response != null)
-                return true;
-
-            _logger.LogWarning("Register returned null for username {Username}", model.UserName);
-            return false;
+            return response != null;
         }
         catch (ApiException ex)
         {
-            var content = ex.Content; // Refit ApiException có property Content
-            _logger.LogError("Register failed for {Username}. Status: {StatusCode}, Content: {Content}",
-                             model.UserName, ex.StatusCode, content);
+            _logger.LogError(ex, "API register thất bại");
             return false;
         }
     }
 
+    // Lấy user hiện tại từ JWT
+    public UserInfo GetCurrentUser()
+    {
+        var token = GetTokenFromCookie();
+        if (string.IsNullOrEmpty(token)) return null;
+
+        var handler = new JwtSecurityTokenHandler();
+        var jwtToken = handler.ReadToken(token) as JwtSecurityToken;
+        if (jwtToken == null) return null;
+
+        return new UserInfo
+        {
+            Id = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value,
+            Email = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value,
+            Role = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value,
+            Name = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value
+        };
+    }
+
+    // Logout
+    public async Task LogoutAsync()
+    {
+        var response = _httpContextAccessor.HttpContext?.Response;
+        response?.Cookies.Delete(TokenCookieName);
+
+        await _httpContextAccessor.HttpContext.SignOutAsync("MyCookieAuth");
+    }
+
+    // Lấy role hiện tại của user
     public async Task<string> GetCurrentRoleAsync()
     {
         var user = _httpContextAccessor.HttpContext?.User;
@@ -98,13 +122,8 @@ public class AuthService
         return roleClaim ?? string.Empty;
     }
 
-    public void Logout()
-    {
-        var response = _httpContextAccessor.HttpContext?.Response;
-        response?.Cookies.Delete(TokenCookieName);
-    }
-
-    public void SaveTokenToCookie(string token)
+    // Helper methods to manage cookies
+    private void SaveTokenToCookie(string token)
     {
         var response = _httpContextAccessor.HttpContext?.Response;
         response?.Cookies.Append(TokenCookieName, token, new CookieOptions
@@ -115,36 +134,14 @@ public class AuthService
             Expires = DateTimeOffset.UtcNow.AddHours(1)  // Điều chỉnh thời gian hết hạn nếu cần
         });
     }
-    public string GetTokenFromCookie()
+
+    private string GetTokenFromCookie()
     {
         var request = _httpContextAccessor.HttpContext?.Request;
         return request?.Cookies[TokenCookieName];
     }
 
-    public UserInfo GetCurrentUser()
-    {
-        var token = GetTokenFromCookie();
-        if (string.IsNullOrEmpty(token)) return null;
-
-        var handler = new JwtSecurityTokenHandler();
-        var jwtToken = handler.ReadToken(token) as JwtSecurityToken;
-
-        if (jwtToken == null) return null;
-
-        var userId = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
-        var email = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
-        var role = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
-        var name = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value;
-
-        return new UserInfo
-        {
-            Id = userId,
-            Email = email,
-            Role = role,
-            Name = name
-        };
-    }
-
+    // Refresh token (optional)
     public async Task<bool> RefreshTokenAsync()
     {
         var refreshToken = GetRefreshTokenFromCookie();
@@ -167,7 +164,7 @@ public class AuthService
         }
     }
 
-    // Add this method to fix the CS0103 error
+    // Save refresh token to cookie
     public void SaveRefreshTokenToCookie(string refreshToken)
     {
         var response = _httpContextAccessor.HttpContext?.Response;
@@ -180,7 +177,7 @@ public class AuthService
         });
     }
 
-    // Add this helper method to retrieve the refresh token from the cookie
+    // Retrieve refresh token from cookie
     public string GetRefreshTokenFromCookie()
     {
         var request = _httpContextAccessor.HttpContext?.Request;

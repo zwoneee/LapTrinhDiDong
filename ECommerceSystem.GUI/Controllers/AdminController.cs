@@ -73,5 +73,13 @@ namespace ECommerceSystem.GUI.Controllers
                 return ex.Content ?? "Unknown error content";
             }
         }
+
+        // ========================= 🟢 ADMIN CHAT PAGE =========================
+        [HttpGet("/Admin/AdminChat")]
+        public IActionResult AdminChat()
+        {
+            // Hiển thị giao diện chat admin (Views/Admin/AdminChat.cshtml)
+            return View();
+        }
     }
 }

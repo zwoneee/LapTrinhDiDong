@@ -1,65 +1,46 @@
 using AspNetCoreRateLimit;
 using EcommerceSystem.API.Data.Repositories;
+using EcommerceSystem.API.Services;
 using ECommerceSystem.Api.Data;
 using ECommerceSystem.Api.Data.Repositories;
 using ECommerceSystem.Api.Hubs;
 using ECommerceSystem.Api.Repositories;
 using ECommerceSystem.Api.Services;
-using ECommerceSystem.Api.Data.Repositories;
 using ECommerceSystem.Shared.Entities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
 using System.Text;
+using Role = ECommerceSystem.Shared.Entities.Role;
 
 var builder = WebApplication.CreateBuilder(args);
 
-//#region Swagger (OpenAPI)
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
-    {
-        Title = "ECommerceSystem.Api",
-        Version = "v1"
-    });
+#region Services
 
-    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-    {
-        Description = "Dán JWT token vào đây (không cần ghi chữ Bearer):",
-        Name = "Authorization",
-        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
-    });
-
-    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
-    {
-        {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-            {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                },
-                Scheme = "Bearer",
-                Name = "Authorization",
-                In = Microsoft.OpenApi.Models.ParameterLocation.Header
-            },
-            new List<string>()
-        }
-    });
-});
-//#endregion
-
-#region Database & MongoDB
+// ✅ Kết nối DB
 builder.Services.AddDbContext<WebDBContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-#endregion
 
-#region Redis
+// ✅ Identity
+builder.Services.AddIdentityCore<User>(options =>
+{
+    options.Password.RequireDigit = false;
+    options.Password.RequireUppercase = false;
+    options.Password.RequireLowercase = false;
+    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequiredLength = 6;
+})
+.AddRoles<Role>()
+.AddEntityFrameworkStores<WebDBContext>()
+.AddSignInManager<SignInManager<User>>()
+.AddUserManager<UserManager<User>>()
+.AddRoleManager<RoleManager<Role>>()
+.AddDefaultTokenProviders();
+
+// ✅ Redis (nếu có)
 var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
 if (!string.IsNullOrEmpty(redisConnectionString))
 {
@@ -71,78 +52,100 @@ if (!string.IsNullOrEmpty(redisConnectionString))
         options.Configuration = redisConnectionString;
     });
 }
-#endregion
 
-#region SignalR
+// ✅ SignalR
 builder.Services.AddSignalR();
-#endregion
+builder.Services.AddSingleton<ChatConnectionManager>();
+builder.Services.AddSingleton<IUserIdProvider, NameUserIdProvider>();
 
-#region Rate Limiting
+// ✅ Rate Limiting
 builder.Services.AddMemoryCache();
 builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
 builder.Services.AddInMemoryRateLimiting();
 builder.Services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
 builder.Services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
 builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
-#endregion
 
-#region Authentication - JWT
-builder.Services.AddAuthentication("Bearer")
-    .AddJwtBearer("Bearer", options =>
+// ✅ Authentication - JWT
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
             ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SecretKey"])
             )
         };
 
+        // SignalR: lấy token từ query string
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = context =>
             {
-                var rawToken = context.Request.Headers["Authorization"].FirstOrDefault();
-                if (!string.IsNullOrEmpty(rawToken) && !rawToken.StartsWith("Bearer "))
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    path.StartsWithSegments("/chathub"))
                 {
-                    context.Token = rawToken;
+                    context.Token = accessToken;
                 }
 
                 return Task.CompletedTask;
             }
         };
     });
-#endregion
 
-#region CORS
+// ✅ CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowMvcApp", policy =>
     {
-        policy.WithOrigins("https://localhost:7068", "http://localhost:5088")
-              .AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials();  // Cho phép gửi cookie
+        policy.WithOrigins(
+                "https://localhost:7171",
+                "https://localhost:7068",
+                "http://localhost:5088"
+            )
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials();
     });
 });
-#endregion
 
-#region Dependency Injection
+// ✅ Session
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+
+// ✅ DI
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<DataSyncService>();
 builder.Services.AddScoped<CommentRepository>();
 builder.Services.AddScoped<ICartRepository, CartRepository>();
+
+// ✅ Controllers + Swagger
 builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
 #endregion
 
 var app = builder.Build();
 
 #region Middleware
+
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
@@ -156,44 +159,48 @@ else
 }
 
 app.UseHttpsRedirection();
-app.UseStaticFiles(); // ✅ nếu bạn có file ảnh sản phẩm, nên bật cái này
-
-app.UseCors("AllowMvcApp");
+app.UseStaticFiles();
 
 app.UseIpRateLimiting();
 
 app.UseRouting();
+app.UseSession();
+app.UseCors("AllowMvcApp");
 
+// ✅ Authentication & Authorization phải nằm trước MapControllers
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Map Controllers + SignalR
 app.MapControllers();
-app.MapHub<NotificationHub>("/notificationHub");
+app.MapHub<ChatHub>("/chathub");
+
 #endregion
 
-#region Init Roles & Admin
+#region Seed dữ liệu mặc định
+
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     try
     {
-        await RoleInitializer.InitializeAsync(services);
-        await AdminInitializer.SeedAdminAsync(services);
+        await AdminInitializer.SeedRolesAndAdminAsync(services);
+        await UserInitializer.SeedDefaultUserAsync(services);
     }
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "Có lỗi xảy ra khi khởi tạo vai trò.");
+        logger.LogError(ex, "Có lỗi khi khởi tạo dữ liệu mặc định (roles/users).");
     }
 }
 
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    await RoleInitializer.InitializeAsync(services);
-    await UserInitializer.InitializeAsync(services);
-}
-
 #endregion
+
+// Debug header Authorization
+app.Use(async (context, next) =>
+{
+    Console.WriteLine("🔥 Authorization Header: " + context.Request.Headers["Authorization"]);
+    await next();
+});
 
 app.Run();

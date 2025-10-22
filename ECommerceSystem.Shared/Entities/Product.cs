@@ -8,7 +8,7 @@ namespace ECommerceSystem.Shared.Entities
         public string? Description { get; set; }
         public string? ThumbnailUrl { get; set; }
         public int CategoryId { get; set; }
-        public int Stock { get; set; }
+        public int? Stock { get; set; }
         public float? Rating { get; set; }
         public bool IsPromoted { get; set; }
         public string? QrCode { get; set; }

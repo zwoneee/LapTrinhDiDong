@@ -1,6 +1,6 @@
 ﻿using ECommerceSystem.GUI.Services;
 using ECommerceSystem.Shared.DTOs.Models;
-using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Refit;
@@ -16,75 +16,71 @@ namespace ECommerceSystem.GUI.Controllers
 
         public AccountController(AuthService authService, ILogger<AccountController> logger)
         {
-            _authService = authService ?? throw new ArgumentNullException(nameof(authService));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _authService = authService;
+            _logger = logger;
         }
 
+        // Hiển thị trang đăng nhập
         [HttpGet]
-        public IActionResult Index()
+        public IActionResult Login()
         {
             return View();
         }
 
-        [HttpGet]
-        public IActionResult Login()
-        {
-            return View(new LoginModel());
-        }
-
+        // Xử lý đăng nhập
         [HttpPost]
-        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginModel model)
         {
             if (!ModelState.IsValid)
-            {
-                foreach (var entry in ModelState)
-                {
-                    foreach (var error in entry.Value.Errors)
-                    {
-                        _logger.LogWarning("Lỗi trường {Field}: {Error}", entry.Key, error.ErrorMessage);
-                    }
-                }
+                return View(model);
 
-                ViewBag.ErrorMessage = "Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.";
+            // Gọi AuthService, trả về tuple (success, role, token)
+            var (success, role, token) = await _authService.LoginAsync(model); // Đảm bảo phương thức trả về đúng 3 giá trị
+
+            if (!success)
+            {
+                ViewBag.ErrorMessage = "Tên đăng nhập hoặc mật khẩu không đúng!";
                 return View(model);
             }
 
-            try
+            // Lấy thông tin user từ JWT hoặc AuthService
+            var currentUser = _authService.GetCurrentUser();
+            if (currentUser != null)
             {
-                var (success, role) = await _authService.LoginAsync(model);
-
-                if (!success || string.IsNullOrEmpty(role))
-                {
-                    _logger.LogWarning("Failed login attempt for username: {Username}", model.Username);
-                    ViewBag.ErrorMessage = "Tên đăng nhập hoặc mật khẩu không đúng.";
-                    return View(model);
-                }
-
-                _logger.LogInformation("Successful login for username: {Username}", model.Username);
-
-                // Điều hướng theo vai trò
-                return role switch
-                {
-                    "Admin" => RedirectToAction("Index", "Admin"),
-                    "Customer" => RedirectToAction("Index", "Home"),
-                    _ => RedirectToAction("Index", "Home")
-                };
+                HttpContext.Session.SetString("UserId", currentUser.Id);
+                HttpContext.Session.SetString("UserName", currentUser.Name ?? "");
+                HttpContext.Session.SetString("UserRole", currentUser.Role ?? "");
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error during login attempt for username: {Username}", model.Username);
-                ViewBag.ErrorMessage = "Đã xảy ra lỗi khi đăng nhập. Vui lòng thử lại sau.";
-                return View(model);
-            }   
+
+            // Trả về cùng Login.cshtml với token + user info
+            ViewBag.Token = token;
+            ViewBag.UserId = currentUser?.Id;
+            ViewBag.UserName = currentUser?.Name;
+            ViewBag.Role = role;
+
+            return View("Login"); // Không tạo view mới
         }
 
+        // Đăng xuất
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Logout()
+        {
+            await _authService.LogoutAsync();
+
+            Response.Cookies.Delete("AuthToken");
+
+            return RedirectToAction("Login", "Account");
+        }
+
+        // Hiển thị trang đăng ký
         [HttpGet]
         public IActionResult Register()
         {
-            return View(new RegisterModel());
+            return View();
         }
 
+        // Đăng ký
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Register(RegisterModel model)
@@ -123,7 +119,7 @@ namespace ECommerceSystem.GUI.Controllers
                 _logger.LogInformation("Đăng ký thành công cho username: {Username}", model.UserName);
 
                 // Tự động đăng nhập sau khi đăng ký
-                var (loginSuccess, role) = await _authService.LoginAsync(new LoginModel
+                var (loginSuccess, role, _) = await _authService.LoginAsync(new LoginModel
                 {
                     Username = model.UserName,
                     Password = model.Password
@@ -157,27 +153,6 @@ namespace ECommerceSystem.GUI.Controllers
                 ViewBag.ErrorMessage = "Đã xảy ra lỗi khi đăng ký. Vui lòng thử lại sau.";
                 return View(model);
             }
-        }
-
-
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Logout()
-        {
-            try
-            {
-                await HttpContext.SignOutAsync("MyCookieAuth");
-                _authService.Logout(); // Xóa cookie token
-                _logger.LogInformation("User logged out successfully.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error during logout process.");
-                return View("Error");
-            }
-
-            return RedirectToAction("Index", "Home");
         }
     }
 }

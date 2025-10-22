@@ -85,7 +85,7 @@ namespace ECommerceSystem.Api.Controllers
                     Rating = p.Rating,
                     IsPromoted = p.IsPromoted,
                     QrCode = p.QrCode,
-                    Stock = p.Stock,
+                    Stock = p.Stock ,
                     Slug = p.Slug
                 })
                 .ToListAsync();
@@ -148,8 +148,8 @@ namespace ECommerceSystem.Api.Controllers
                     Description = model.Description,
                     ThumbnailUrl = model.ThumbnailUrl,
                     CategoryId = model.CategoryId,
-                    Stock = model.Stock,
-                    Rating = model.Rating,
+                    Stock = model.Stock ?? 0,
+                    Rating = model.Rating ?? 0f,
                     IsPromoted = model.IsPromoted,
                     QrCode = model.QrCode,
                     Slug = model.Slug,
@@ -185,8 +185,8 @@ namespace ECommerceSystem.Api.Controllers
             product.Description = model.Description;
             product.ThumbnailUrl = model.ThumbnailUrl;
             product.CategoryId = model.CategoryId;
-            product.Stock = model.Stock;
-            product.Rating = model.Rating ?? 0f;
+            product.Stock = model.Stock ?? 0;
+            product.Rating = model.Rating ?? product.Rating;
             product.IsPromoted = model.IsPromoted;
             product.QrCode = model.QrCode;
             product.Slug = model.Slug;
