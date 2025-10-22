@@ -1,6 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using ECommerceSystem.Shared.Entities;
-using Microsoft.EntityFrameworkCore;
+﻿using ECommerceSystem.Shared.Entities;
+using Microsoft.AspNetCore.Identity;
 
 namespace ECommerceSystem.Api.Data
 {
@@ -8,21 +7,17 @@ namespace ECommerceSystem.Api.Data
     {
         public static async Task InitializeAsync(IServiceProvider serviceProvider)
         {
-            var db = serviceProvider.GetRequiredService<WebDBContext>();
+            var roleManager = serviceProvider.GetRequiredService<RoleManager<Role>>();
 
-            // Khởi tạo role 'Admin' nếu chưa có
-            if (!await db.Roles.AnyAsync(r => r.Name == "Admin"))
+            string[] roleNames = { "Admin", "User" };
+
+            foreach (var roleName in roleNames)
             {
-                db.Roles.Add(new Role { Name = "Admin" });
+                if (!await roleManager.RoleExistsAsync(roleName))
+                {
+                    await roleManager.CreateAsync(new Role { Name = roleName });
+                }
             }
-
-            // Khởi tạo role 'User' nếu chưa có
-            if (!await db.Roles.AnyAsync(r => r.Name == "User"))
-            {
-                db.Roles.Add(new Role { Name = "User" });
-            }
-
-            await db.SaveChangesAsync();
         }
     }
 }

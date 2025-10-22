@@ -1,6 +1,7 @@
 ﻿using ECommerceSystem.Api.Data;
 using ECommerceSystem.Shared.DTOs;
 using ECommerceSystem.Shared.DTOs.Product;
+using ECommerceSystem.Shared.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -22,7 +23,7 @@ namespace ECommerceSystem.Api.Controllers
             _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         }
 
-        // API thống kê theo loại (revenue, orders, top-products)
+        // ======================= 1️⃣ API: Thống kê hệ thống =======================
         [HttpGet("statistics")]
         public async Task<IActionResult> GetStatistics(string type, string? period = "")
         {
@@ -102,7 +103,7 @@ namespace ECommerceSystem.Api.Controllers
             }
         }
 
-        // API kiểm tra tồn kho thấp (<=10)
+        // ======================= 2️⃣ API: Kiểm tra tồn kho thấp =======================
         [HttpGet("inventory")]
         public async Task<IActionResult> GetInventory()
         {
@@ -114,6 +115,68 @@ namespace ECommerceSystem.Api.Controllers
                     .ToListAsync();
 
                 return Ok(new { LowStock = lowStockProducts });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Error = ex.Message });
+            }
+        }
+
+        // ======================= 3️⃣ API: Lấy lịch sử tin nhắn người dùng =======================
+        [HttpGet("chat/history")]
+        public async Task<IActionResult> GetAllChatHistory()
+        {
+            try
+            {
+                var messages = await _dbContext.ChatMessages
+                    .Include(m => m.FromUser)
+                    .OrderByDescending(m => m.SentAt)
+                    .Take(100)
+                    .Select(m => new
+                    {
+                        m.Id,
+                        SenderI = m.FromUserId,
+                        SenderEmail = m.FromUser.Email,
+                        m.Content,
+                        m.FileUrl,
+                        m.FileType,
+                        m.FileName,
+                        m.SentAt
+                    })
+                    .ToListAsync();
+
+                return Ok(messages);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Error = ex.Message });
+            }
+        }
+
+        // ======================= 4️⃣ API: Gửi tin nhắn từ Admin =======================
+        [HttpPost("chat/send")]
+        public async Task<IActionResult> SendAdminMessage([FromBody] ChatMessage dto)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(dto.Content) && string.IsNullOrWhiteSpace(dto.FileUrl))
+                    return BadRequest(new { Error = "Tin nhắn trống." });
+
+                var message = new ChatMessage
+                {
+                    FromUserId = dto.FromUserId,
+                    ToUserId = dto.ToUserId,
+                    Content = dto.Content,
+                    FileUrl = dto.FileUrl,
+                    FileType = dto.FileType,
+                    FileName = dto.FileName,
+                    SentAt = DateTime.UtcNow
+                };
+
+                _dbContext.ChatMessages.Add(message);
+                await _dbContext.SaveChangesAsync();
+
+                return Ok(new { Success = true, Message = "Gửi thành công", SentAt = message.SentAt });
             }
             catch (Exception ex)
             {

@@ -88,7 +88,7 @@ namespace ECommerceSystem.Api.Controllers
                     Rating = p.Rating,
                     IsPromoted = p.IsPromoted,
                     QrCode = p.QrCode,
-                    Stock = p.Stock,
+                    Stock = p.Stock ,
                     Slug = p.Slug
                 })
                 .ToListAsync();

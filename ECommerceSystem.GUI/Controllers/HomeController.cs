@@ -14,7 +14,7 @@ namespace ECommerceSystem.GUI.Controllers
     {
         private readonly ILogger<HomeController> _logger;
         private readonly ICategoryApi _categoryApi;
-        private readonly IProductApi _productApi;
+        private readonly IProductApi _productApi;   
 
         public HomeController(ILogger<HomeController> logger, ICategoryApi categoryApi, IProductApi productApi)
         {

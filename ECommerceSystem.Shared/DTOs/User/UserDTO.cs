@@ -1,4 +1,4 @@
-﻿namespace ECommerceSystem.Shared.DTOs.User
+﻿    namespace ECommerceSystem.Shared.DTOs.User
 {
     public class UserDTO
     {

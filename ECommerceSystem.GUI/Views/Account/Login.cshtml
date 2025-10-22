@@ -8,7 +8,7 @@
 <div class="container mt-5" style="max-width: 500px;">
     <h2 class="mb-4 text-center">Đăng nhập</h2>
 
-    <form asp-action="Login" asp-controller="Account" method="post">
+    <form id="loginForm" asp-action="Login" asp-controller="Account" method="post">
         <div class="form-group mb-3">
             <label asp-for="Username"></label>
             <input asp-for="Username" class="form-control" />
@@ -23,9 +23,12 @@
 
         @if (!string.IsNullOrEmpty(ViewBag.ErrorMessage))
         {
-            <div class="alert alert-danger">@ViewBag.ErrorMessage</div>
+            <div id="loginError" class="alert alert-danger">@ViewBag.ErrorMessage</div>
         }
-
+        else
+        {
+            <div id="loginError" class="alert alert-danger d-none"></div>
+        }
 
         <button type="submit" class="btn btn-primary w-100">Đăng nhập</button>
     </form>
@@ -37,4 +40,24 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+
+    @* Lưu token + user vào localStorage nếu login thành công *@
+    @if (ViewBag.Token != null)
+    {
+        <script>
+            localStorage.setItem("authToken", "@ViewBag.Token");
+            localStorage.setItem("currentUser", JSON.stringify({
+                id: "@ViewBag.UserId",
+                name: "@ViewBag.UserName",
+                role: "@ViewBag.Role"
+            }));
+
+            // Redirect theo role
+            if ("@ViewBag.Role" === "Admin") {
+                window.location.href = "/Admin/Index";
+            } else {
+                window.location.href = "/Home/Index";
+            }
+        </script>
+    }
 }
