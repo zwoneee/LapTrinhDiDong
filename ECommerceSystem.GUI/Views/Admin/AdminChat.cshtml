@@ -26,4 +26,17 @@
     document.getElementById("chatMessageInput").addEventListener("keypress", e => {
         if (e.key === "Enter") sendAdminMessage();
     });
+        document.addEventListener("DOMContentLoaded", function() {
+        // Gọi API để lấy lịch sử chat
+        fetch("/api/chat/history?withUserId=USER_ID")
+            .then(response => response.json())
+            .then(data => {
+                const chatMessagesContainer = document.getElementById("chatMessages");
+                data.forEach(message => {
+                    const messageElement = document.createElement("div");
+                    messageElement.textContent = message.Content;
+                    chatMessagesContainer.appendChild(messageElement);
+                });
+            });
+    });
 </script>

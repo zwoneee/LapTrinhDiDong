@@ -153,6 +153,7 @@ namespace ECommerceSystem.Api.Controllers
 
             return Ok(users);
         }
+
         [HttpGet("history")]
         public async Task<IActionResult> GetChatHistory([FromQuery] int withUserId = 0)
         {

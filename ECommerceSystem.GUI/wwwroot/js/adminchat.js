@@ -61,6 +61,7 @@ async function loadUsers() {
         users.forEach(u => {
             const div = document.createElement("div");
             div.className = "user-item p-2 border-bottom cursor-pointer";
+            div.style.cursor = "pointer";
             div.textContent = u.email || u.Email;
             div.onclick = () => selectUser(u.id || u.Id);
             listDiv.appendChild(div);
@@ -82,7 +83,7 @@ async function selectUser(userId) {
 // ====================== 📜 Lịch sử chat ======================
 async function loadChatHistory(userId) {
     try {
-        const res = await fetch(`https://localhost:7068/api/admin/chat/history`, {
+        const res = await fetch(`https://localhost:7068/api/chat/history?withUserId=${userId}`, {
             headers: { "Authorization": `Bearer ${token}` }
         });
         if (!res.ok) {
@@ -92,7 +93,7 @@ async function loadChatHistory(userId) {
 
         const messages = await res.json();
         const filtered = messages.filter(m =>
-            m.senderI === userId || m.toUserId === userId
+            m.fromUserId === userId || m.toUserId === userId
         );
 
         console.log("💬 Lịch sử user:", filtered);
@@ -166,8 +167,7 @@ function appendMessage(fromId, message, sentAt, fileUrl, fileType, fileName) {
     const div = document.createElement("div");
     div.className = isMe ? "text-end my-1" : "text-start my-1";
     div.innerHTML = `
-        <div style="display:inline-block; background:${isMe ? "#007bff" : "#e9ecef"};
-                    color:${isMe ? "white" : "black"}; padding:6px 10px; border-radius:10px; max-width:80%;">
+        <div style="display:inline-block; background:${isMe ? "#007bff" : "#e9ecef"}; color:${isMe ? "white" : "black"}; padding:6px 10px; border-radius:10px; max-width:80%;">
             ${isMe ? "Admin" : "User"}: ${message}
         </div>
         <div style="font-size:10px; color:gray;">${time}</div>

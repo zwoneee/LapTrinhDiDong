@@ -2,18 +2,26 @@
 using ECommerceSystem.Shared.DTOs.Models;
 using ECommerceSystem.Shared.DTOs.Product;
 using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
+using System;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace ECommerceSystem.GUI.Controllers
 {
     public class CartController : Controller
     {
         private readonly ICartApi _cartApi;
+        private readonly decimal _discountThreshold;
+        private readonly decimal _discountPercent;
 
-        public CartController(ICartApi cartApi)
+        public CartController(ICartApi cartApi, IConfiguration configuration)
         {
             _cartApi = cartApi;
+            // Read discount settings from configuration (appsettings.json)
+            // Fallback defaults: threshold = 1_000_000, percent = 10
+            _discountThreshold = configuration.GetValue<decimal>("CartDiscount:Threshold", 1000000m);
+            _discountPercent = configuration.GetValue<decimal>("CartDiscount:Percent", 10m);
         }
 
         // Hiển thị giỏ hàng
@@ -22,6 +30,14 @@ namespace ECommerceSystem.GUI.Controllers
             try
             {
                 var cart = await _cartApi.GetCart();
+
+                // Calculate discount and pass to view via ViewBag
+                var (percent, amount, final) = CalculateDiscount(cart);
+                ViewBag.DiscountPercent = percent;
+                ViewBag.DiscountAmount = amount;
+                ViewBag.FinalTotal = final;
+                ViewBag.DiscountThreshold = _discountThreshold;
+
                 return View(cart);
             }
             catch (Exception ex)
@@ -98,7 +114,13 @@ namespace ECommerceSystem.GUI.Controllers
                     return RedirectToAction("Index");
                 }
 
+                var (percent, amount, final) = CalculateDiscount(cart);
                 ViewBag.Cart = cart;
+                ViewBag.DiscountPercent = percent;
+                ViewBag.DiscountAmount = amount;
+                ViewBag.FinalTotal = final;
+                ViewBag.DiscountThreshold = _discountThreshold;
+
                 return View(new CheckoutModel());
             }
             catch
@@ -115,7 +137,11 @@ namespace ECommerceSystem.GUI.Controllers
             if (!ModelState.IsValid)
             {
                 var cart = await _cartApi.GetCart();
+                var (percent, amount, final) = CalculateDiscount(cart);
                 ViewBag.Cart = cart;
+                ViewBag.DiscountPercent = percent;
+                ViewBag.DiscountAmount = amount;
+                ViewBag.FinalTotal = final;
                 return View(model); // Giữ lại form để người dùng sửa
             }
 
@@ -138,6 +164,23 @@ namespace ECommerceSystem.GUI.Controllers
                 TempData["ErrorMessage"] = "Đã xảy ra lỗi khi thanh toán.";
                 return RedirectToAction("Checkout");
             }
+        }
+
+        // Helper: calculate discount based on configured threshold & percent
+        private (decimal Percent, decimal Amount, decimal FinalTotal) CalculateDiscount(CartDTO cart)
+        {
+            if (cart == null || cart.Items == null || cart.Items.Count == 0)
+                return (0m, 0m, 0m);
+
+            var total = cart.Total;
+            if (total >= _discountThreshold && _discountPercent > 0)
+            {
+                var amount = Math.Round(total * _discountPercent / 100m, 2);
+                var final = total - amount;
+                return (_discountPercent, amount, final);
+            }
+
+            return (0m, 0m, total);
         }
     }
 }
