@@ -68,6 +68,27 @@ namespace ECommerceSystem.Api.Data
             modelBuilder.Entity<ProductRating>()
                 .HasIndex(r => r.ProductId);
 
+            //Comment - Product relationship
+            modelBuilder.Entity<Comment>(e =>
+            {
+                e.HasKey(x => x.Id);
+                e.Property(x => x.Content).IsRequired().HasMaxLength(2000);
+                e.Property(x => x.UserId).IsRequired();
+                e.Property(x => x.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+                e.Property(x => x.UpdatedAt).HasDefaultValueSql("GETUTCDATE()");
+
+                e.HasIndex(x => x.ProductId);
+                e.HasOne(x => x.Product)
+                    .WithMany(p => p.Comments)
+                    .HasForeignKey(x => x.ProductId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                e.HasOne(x => x.User)
+                    .WithMany(u => u.Comments)
+                    .HasForeignKey(x => x.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
             // Soft delete filters
             modelBuilder.Entity<User>().HasQueryFilter(e => !e.IsDeleted);
             modelBuilder.Entity<Product>().HasQueryFilter(e => !e.IsDeleted);

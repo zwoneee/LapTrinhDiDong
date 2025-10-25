@@ -85,20 +85,34 @@ namespace ECommerceSystem.Api.Controllers
             if (!validPassword)
                 return Unauthorized(new { error = "Tên đăng nhập hoặc mật khẩu không đúng." });
 
-            var (userDto, roles) = await _userRepo.GetUserInfoAndRole(user.UserName);
+            // Lấy thông tin user + role
+            var (userDto, rolesString) = await _userRepo.GetUserInfoAndRole(user.UserName);
             if (userDto == null)
                 return StatusCode(500, new { error = "Lỗi lấy thông tin người dùng." });
 
-            // Tạo JWT token
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Name, user.UserName),
-                new Claim(ClaimTypes.Email, user.Email ?? string.Empty)
-            };
-            if (!string.IsNullOrEmpty(roles))
-                claims.Add(new Claim(ClaimTypes.Role, roles));
+            // Chuẩn hóa roles
+            var roles = rolesString.Split(',', StringSplitOptions.RemoveEmptyEntries);
 
+            // Tạo claims
+            var claims = new List<Claim>
+    {
+        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+        new Claim(ClaimTypes.Name, user.UserName),
+        new Claim(ClaimTypes.Email, user.Email ?? string.Empty)
+    };
+
+            foreach (var role in roles)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role.Trim()));
+            }
+
+            // Nếu user là admin, chắc chắn thêm role "Admin"
+            if (roles.Contains("Admin"))
+            {
+                claims.Add(new Claim(ClaimTypes.Role, "Admin"));
+            }
+
+            // Tạo JWT
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:SecretKey"]));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
@@ -114,7 +128,7 @@ namespace ECommerceSystem.Api.Controllers
             {
                 token = new JwtSecurityTokenHandler().WriteToken(token),
                 expiration = token.ValidTo,
-                roles,
+                roles = roles,
                 user = new
                 {
                     userDto.Id,

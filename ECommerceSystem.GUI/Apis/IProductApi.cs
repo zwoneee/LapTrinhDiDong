@@ -8,14 +8,15 @@ namespace ECommerceSystem.GUI.Apis
     {
         [Get("/api/public/products")]
         Task<ProductListResponse> GetProductsAsync(
-            [AliasAs("search")] string? search,
-            [AliasAs("categoryId")] int? categoryId,
-            [AliasAs("minPrice")] decimal? minPrice,
-            [AliasAs("maxPrice")] decimal? maxPrice,
-            [AliasAs("sortBy")] string? sortBy,
-            [AliasAs("promotion")] bool? promotion,
-            [AliasAs("page")] int page = 1,
-            [AliasAs("pageSize")] int pageSize = 10);
+          [AliasAs("search")] string? search = null,
+          [AliasAs("categoryId")] int? categoryId = null,
+          [AliasAs("minPrice")] decimal? minPrice = null,
+          [AliasAs("maxPrice")] decimal? maxPrice = null,
+          [AliasAs("sortBy")] string? sortBy = null,
+          [AliasAs("promotion")] bool? promotion = null,
+          [AliasAs("page")] int page = 1,
+          [AliasAs("pageSize")] int pageSize = 10
+        );
 
         [Get("/api/public/products/{id}")]
         Task<ProductDTO> GetByIdAsync(int id);

@@ -1,5 +1,4 @@
-﻿using DocumentFormat.OpenXml.Spreadsheet;
-using ECommerceSystem.Api.Data;
+﻿using ECommerceSystem.Api.Data;
 using ECommerceSystem.Api.Hubs;
 using ECommerceSystem.Shared.Entities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -26,9 +25,7 @@ namespace ECommerceSystem.Api.Controllers
             _connManager = connManager;
         }
 
-        /// <summary>
-        /// Lấy UserId từ JWT
-        /// </summary>
+        // ✅ Lấy UserId từ JWT token
         private int GetMyId()
         {
             var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
@@ -37,23 +34,22 @@ namespace ECommerceSystem.Api.Controllers
             return int.TryParse(userIdClaim, out var id) ? id : 0;
         }
 
-
-        // ====================== Upload file ======================
+        // ✅ Upload file gửi qua chat
         [HttpPost("upload")]
         public async Task<IActionResult> UploadFile(IFormFile file)
         {
-            if (file == null) return BadRequest("No file uploaded");
+            if (file == null)
+                return BadRequest("No file uploaded");
 
             var uploads = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-            if (!Directory.Exists(uploads)) Directory.CreateDirectory(uploads);
+            if (!Directory.Exists(uploads))
+                Directory.CreateDirectory(uploads);
 
             var fileName = Path.GetRandomFileName() + Path.GetExtension(file.FileName);
             var filePath = Path.Combine(uploads, fileName);
 
             using (var stream = new FileStream(filePath, FileMode.Create))
-            {
                 await file.CopyToAsync(stream);
-            }
 
             var fileUrl = $"{Request.Scheme}://{Request.Host}/uploads/{fileName}";
             var fileType = file.ContentType.StartsWith("image/") ? "image" :
@@ -62,41 +58,35 @@ namespace ECommerceSystem.Api.Controllers
             return Ok(new { url = fileUrl, fileName = file.FileName, fileType });
         }
 
-        // ====================== Customer gửi message ======================
+        // ✅ User gửi tin nhắn cho Admin (Admin ID = 1)
         [HttpPost("customer/send")]
         public async Task<IActionResult> CustomerSend([FromBody] ChatMessage message)
         {
             var me = GetMyId();
-            if (me == 0) return Unauthorized();
+            if (me == 0)
+                return Unauthorized("Không xác định được người dùng.");
 
             message.FromUserId = me;
-            message.ToUserId = 1    ; // broadcast tới admin
+            message.ToUserId = 1; // luôn gửi đến Admin duy nhất
             message.SentAt = DateTime.UtcNow;
 
             _db.ChatMessages.Add(message);
             await _db.SaveChangesAsync();
 
-            // SignalR gửi tới Admins
-            await _hub.Clients.Group("Admins").SendAsync(
-                "ReceiveMessage",
-                message.FromUserId,
-                message.Content,
-                message.SentAt,
-                message.FileUrl,
-                message.FileType,
-                message.FileName
-            );
+            // Gửi realtime tới Admin group
+            await _hub.Clients.Group("Admins").SendAsync("ReceiveMessage", message);
 
             return Ok(message);
         }
 
-        // ====================== Admin gửi message ======================
+        // ✅ Admin gửi tin nhắn cho 1 user
         [HttpPost("admin/send")]
-        [Authorize(Roles = "Admin")]
+        [Authorize] // chỉ cần token hợp lệ (vì chỉ có 1 admin thật)
         public async Task<IActionResult> AdminSend([FromBody] ChatMessage message)
         {
             var adminId = GetMyId();
-            if (adminId == 0) return Unauthorized();
+            if (adminId != 1)
+                return Forbid("Bạn không phải admin.");
 
             message.FromUserId = adminId;
             message.SentAt = DateTime.UtcNow;
@@ -104,45 +94,33 @@ namespace ECommerceSystem.Api.Controllers
             _db.ChatMessages.Add(message);
             await _db.SaveChangesAsync();
 
-            // Gửi tới Customer
+            // Gửi tin tới User (client)
             foreach (var connId in _connManager.GetConnections(message.ToUserId))
             {
-                await _hub.Clients.Client(connId).SendAsync(
-                    "ReceiveMessage",
-                    message.FromUserId,
-                    message.Content,
-                    message.SentAt,
-                    message.FileUrl,
-                    message.FileType,
-                    message.FileName
-                );
+                await _hub.Clients.Client(connId).SendAsync("ReceiveMessage", new
+                {
+                    fromUserId = message.FromUserId,
+                    toUserId = message.ToUserId,
+                    content = message.Content,
+                    sentAt = message.SentAt
+                });
             }
 
-            // Echo lại cho Admin
-            foreach (var connId in _connManager.GetConnections(adminId))
+            // Gửi lại cho admin (hiển thị realtime)
+            foreach (var connId in _connManager.GetConnections(1))
             {
-                await _hub.Clients.Client(connId).SendAsync(
-                    "ReceiveMessage",
-                    message.FromUserId,
-                    message.Content,
-                    message.SentAt,
-                    message.FileUrl,
-                    message.FileType,
-                    message.FileName
-                );
+                await _hub.Clients.Client(connId).SendAsync("ReceiveMessage", message);
             }
 
             return Ok(message);
         }
 
-        // ✅ API lấy danh sách tất cả người dùng (trừ admin)
+        // ✅ Lấy danh sách tất cả user (trừ admin)
         [HttpGet("users")]
-        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAllUsers()
         {
             var users = await _db.Users
-                .Where(u => !_db.UserRoles
-                    .Any(ur => ur.UserId == u.Id && _db.Roles.Any(r => r.Id == ur.RoleId && r.Name == "Admin")))
+                .Where(u => u.Id != 1)
                 .Select(u => new
                 {
                     u.Id,
@@ -154,37 +132,49 @@ namespace ECommerceSystem.Api.Controllers
             return Ok(users);
         }
 
+        // ✅ Lấy lịch sử chat
         [HttpGet("history")]
         public async Task<IActionResult> GetChatHistory([FromQuery] int withUserId = 0)
         {
-            var userId = GetMyId();
-            if (userId == 0)
-                return Unauthorized("Không xác định được người dùng.");
+            var myId = GetMyId();
+            if (myId == 0) return Unauthorized("Không xác định được người dùng.");
 
-            var isAdmin = User.IsInRole("Admin");
-
+            bool isAdmin = User.IsInRole("Admin");
             IQueryable<ChatMessage> query;
 
             if (isAdmin)
             {
-                // 👑 Admin xem lịch sử với user cụ thể
-                if (withUserId == 0)
-                    return BadRequest("Thiếu userId cần xem lịch sử.");
-
+                if (withUserId == 0) return BadRequest("Thiếu userId cần xem lịch sử.");
+                const int adminId = 1;
                 query = _db.ChatMessages.Where(m =>
-                    (m.FromUserId == withUserId && m.ToUserId == 0) ||
-                    (m.FromUserId == 0 && m.ToUserId == withUserId)
+                    (m.FromUserId == withUserId && m.ToUserId == adminId) ||
+                    (m.FromUserId == adminId && m.ToUserId == withUserId)
                 );
             }
             else
             {
-                // 👤 User xem lịch sử với admin (admin thật sự có ID=1)
+                const int adminId = 1;
                 query = _db.ChatMessages.Where(m =>
-                    (m.FromUserId == userId && m.ToUserId == 1) ||
-                    (m.FromUserId == 1 && m.ToUserId == userId)
+                    (m.FromUserId == myId && m.ToUserId == adminId) ||
+                    (m.FromUserId == adminId && m.ToUserId == myId)
                 );
             }
-            var messages = await query.OrderBy(m => m.SentAt).ToListAsync();
+
+            var messages = await query
+                .OrderBy(m => m.SentAt)
+                .Select(m => new
+                {
+                    m.Id,
+                    fromUserId = m.FromUserId,   // <-- added here
+                    toUserId = m.ToUserId,       // <-- added here
+                    m.Content,
+                    m.FileUrl,
+                    m.FileType,
+                    m.FileName,
+                    SentAt = m.SentAt.ToLocalTime()
+                })
+                .ToListAsync();
+
             return Ok(messages);
         }
     }

@@ -76,12 +76,14 @@ namespace EcommerceSystem.API.Data.Repositories
             _context.Comments.Add(comment);
             await _context.SaveChangesAsync();
 
-            // Trả về comment với thông tin đầy đủ
             return await _context.Comments
+                .AsNoTracking()
                 .Include(c => c.User)
+                // Bỏ Include Product nếu response không cần
                 .Include(c => c.Product)
-                .FirstOrDefaultAsync(c => c.Id == comment.Id);
+                .FirstAsync(c => c.Id == comment.Id);
         }
+
 
         // Cập nhật comment
         public async Task UpdateCommentAsync(Comment comment)

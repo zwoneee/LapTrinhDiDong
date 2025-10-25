@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EcommerceSystem.API.Migrations
 {
     [DbContext(typeof(WebDBContext))]
-    [Migration("20251023070356_Init")]
+    [Migration("20251025115958_Init")]
     partial class Init
     {
         /// <inheritdoc />
@@ -150,29 +150,30 @@ namespace EcommerceSystem.API.Migrations
 
                     b.Property<string>("Content")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
 
                     b.Property<int>("ProductId")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("UserId1")
+                    b.Property<int>("UserId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ProductId");
 
-                    b.HasIndex("UserId1");
+                    b.HasIndex("UserId");
 
                     b.ToTable("Comments");
                 });
@@ -624,14 +625,14 @@ namespace EcommerceSystem.API.Migrations
             modelBuilder.Entity("ECommerceSystem.Shared.Entities.Comment", b =>
                 {
                     b.HasOne("ECommerceSystem.Shared.Entities.Product", "Product")
-                        .WithMany()
+                        .WithMany("Comments")
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("ECommerceSystem.Shared.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId1")
+                        .WithMany("Comments")
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -749,6 +750,16 @@ namespace EcommerceSystem.API.Migrations
             modelBuilder.Entity("ECommerceSystem.Shared.Entities.PaymentReceipt", b =>
                 {
                     b.Navigation("Orders");
+                });
+
+            modelBuilder.Entity("ECommerceSystem.Shared.Entities.Product", b =>
+                {
+                    b.Navigation("Comments");
+                });
+
+            modelBuilder.Entity("ECommerceSystem.Shared.Entities.User", b =>
+                {
+                    b.Navigation("Comments");
                 });
 #pragma warning restore 612, 618
         }

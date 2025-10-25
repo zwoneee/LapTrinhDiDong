@@ -13,18 +13,19 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
+using System.Security.Claims;
 using System.Text;
 using Role = ECommerceSystem.Shared.Entities.Role;
 
 var builder = WebApplication.CreateBuilder(args);
 
-#region Services
+#region === SERVICES ===
 
-// ✅ Kết nối DB
+// ✅ Database
 builder.Services.AddDbContext<WebDBContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// ✅ Identity
+// ✅ Identity + Roles
 builder.Services.AddIdentityCore<User>(options =>
 {
     options.Password.RequireDigit = false;
@@ -40,11 +41,11 @@ builder.Services.AddIdentityCore<User>(options =>
 .AddRoleManager<RoleManager<Role>>()
 .AddDefaultTokenProviders();
 
-// ✅ Redis (nếu có)
+// ✅ Redis (tùy chọn)
 var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
 if (!string.IsNullOrEmpty(redisConnectionString))
 {
-    builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+    builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
         ConnectionMultiplexer.Connect(redisConnectionString));
 
     builder.Services.AddStackExchangeRedisCache(options =>
@@ -66,10 +67,11 @@ builder.Services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
 builder.Services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
 builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 
-// ✅ Authentication - JWT
+// ✅ Authentication (JWT)
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        var secretKey = builder.Configuration["Jwt:SecretKey"] ?? throw new Exception("Missing Jwt:SecretKey in appsettings.json");
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -78,12 +80,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SecretKey"])
-            )
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+
+            // ⚙️ BẮT BUỘC để User.IsInRole("Admin") hoạt động
+            RoleClaimType = ClaimTypes.Role,
+            NameClaimType = ClaimTypes.NameIdentifier
         };
 
-        // SignalR: lấy token từ query string
+        // Cho phép lấy token qua query khi dùng SignalR
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = context =>
@@ -91,16 +95,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 var accessToken = context.Request.Query["access_token"];
                 var path = context.HttpContext.Request.Path;
 
-                if (!string.IsNullOrEmpty(accessToken) &&
-                    path.StartsWithSegments("/chathub"))
-                {
+                if (!string.IsNullOrEmpty(accessToken) && (path.StartsWithSegments("/chathub") || path.StartsWithSegments("/commenthub")))
                     context.Token = accessToken;
-                }
 
                 return Task.CompletedTask;
             }
         };
     });
+
+// ✅ Authorization
+builder.Services.AddAuthorization();
 
 // ✅ CORS
 builder.Services.AddCors(options =>
@@ -114,7 +118,8 @@ builder.Services.AddCors(options =>
             )
             .AllowAnyMethod()
             .AllowAnyHeader()
-            .AllowCredentials();
+            .AllowCredentials()
+            .SetIsOriginAllowed(_to => true); 
     });
 });
 
@@ -127,7 +132,7 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
-// ✅ DI
+// ✅ Dependency Injection (Repositories + Services)
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<UserRepository>();
@@ -144,7 +149,7 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-#region Middleware
+#region === MIDDLEWARE ===
 
 if (app.Environment.IsDevelopment())
 {
@@ -160,24 +165,33 @@ else
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-
 app.UseIpRateLimiting();
 
 app.UseRouting();
+
+// 🔍 Debug header Authorization
+app.Use(async (context, next) =>
+{
+    var authHeader = context.Request.Headers["Authorization"].ToString();
+    if (!string.IsNullOrEmpty(authHeader))
+        Console.WriteLine($"🔥 Authorization Header: {authHeader}");
+    await next();
+});
+
 app.UseSession();
 app.UseCors("AllowMvcApp");
 
-// ✅ Authentication & Authorization phải nằm trước MapControllers
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Map Controllers + SignalR
+// ✅ Map Controllers + SignalR Hub
 app.MapControllers();
 app.MapHub<ChatHub>("/chathub");
+app.MapHub<CommentHub>("/commenthub");
 
 #endregion
 
-#region Seed dữ liệu mặc định
+#region === SEED DỮ LIỆU MẶC ĐỊNH ===
 
 using (var scope = app.Services.CreateScope())
 {
@@ -190,17 +204,10 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "Có lỗi khi khởi tạo dữ liệu mặc định (roles/users).");
+        logger.LogError(ex, "❌ Lỗi khi khởi tạo dữ liệu mặc định (roles/users).");
     }
 }
 
 #endregion
-
-// Debug header Authorization
-app.Use(async (context, next) =>
-{
-    Console.WriteLine("🔥 Authorization Header: " + context.Request.Headers["Authorization"]);
-    await next();
-});
 
 app.Run();
