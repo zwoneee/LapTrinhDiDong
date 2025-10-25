@@ -1,6 +1,10 @@
-﻿using EcommerceSystem.API.Data.Repositories;
+﻿// EcommerceSystem.API/Controllers/CommentsController.cs
+using EcommerceSystem.API.Data.Repositories;
+using ECommerceSystem.Shared.DTOs;
 using ECommerceSystem.Shared.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace EcommerceSystem.API.Controllers
 {
@@ -15,172 +19,129 @@ namespace EcommerceSystem.API.Controllers
             _commentRepo = commentRepo;
         }
 
-        // GET: api/comments/product/{productId} - Lấy tất cả comments của một sản phẩm
-        [HttpGet("product/{productId}")]
+        // ============== helpers ==============
+        private static CommentDto ToDto(Comment c) => new CommentDto
+        {
+            Id = c.Id,
+            Content = c.Content,
+            UserName = c.User?.UserName ?? "User",
+            CreatedAt = c.CreatedAt
+        };
+
+        private int? GetUserId()
+        {
+            // thử nhiều claim type phổ biến
+            var claim = User.FindFirst("nameid")
+                       ?? User.FindFirst(ClaimTypes.NameIdentifier)
+                       ?? User.FindFirst("sub");
+            if (claim == null) return null;
+            return int.TryParse(claim.Value, out var id) ? id : null;
+        }
+
+        // ============== GET: comments by product ==============
+        [HttpGet("product/{productId:int}")]
+        [ProducesResponseType(typeof(IEnumerable<CommentDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetCommentsByProductId(int productId)
         {
-            try
-            {
-                var comments = await _commentRepo.GetCommentsByProductIdAsync(productId);
-
-                if (comments == null || !comments.Any())
-                {
-                    return Ok(new List<Comment>()); // Trả về danh sách rỗng thay vì NotFound
-                }
-
-                return Ok(comments);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
-            }
+            var comments = await _commentRepo.GetCommentsByProductIdAsync(productId);
+            // luôn trả 200 với []
+            return Ok(comments.Select(ToDto).ToList());
         }
 
-        // GET: api/comments/{id} - Lấy một comment theo ID
-        [HttpGet("{id}")]
+        // ============== GET: comment by id ==============
+        [HttpGet("{id:int}")]
+        [ProducesResponseType(typeof(CommentDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetCommentById(int id)
         {
-            try
-            {
-                var comment = await _commentRepo.GetCommentByIdAsync(id);
-
-                if (comment == null)
-                {
-                    return NotFound($"Comment with ID {id} not found.");
-                }
-
-                return Ok(comment);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
-            }
+            var comment = await _commentRepo.GetCommentByIdAsync(id);
+            if (comment == null) return NotFound();
+            return Ok(ToDto(comment));
         }
 
-        // POST: api/comments - Thêm comment mới cho một sản phẩm
+        // ============== POST: add (login required) ==============
+        [Authorize]
         [HttpPost]
-        public async Task<IActionResult> AddComment([FromBody] Comment comment)
+        [ProducesResponseType(typeof(CommentDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> AddComment([FromBody] CreateCommentDto dto)
         {
-            try
+            if (dto == null) return BadRequest("Comment data is required.");
+            if (dto.ProductId <= 0) return BadRequest("Valid ProductId is required.");
+            if (string.IsNullOrWhiteSpace(dto.Content)) return BadRequest("Comment content is required.");
+
+            var userId = GetUserId();
+            if (userId is null or <= 0) return Unauthorized();
+
+            var entity = new Comment
             {
-                // Validation
-                if (comment == null)
-                {
-                    return BadRequest("Comment data is required.");
-                }
+                ProductId = dto.ProductId,
+                Content = dto.Content.Trim(),
+                UserId = userId.Value,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
 
-                if (comment.ProductId <= 0)
-                {
-                    return BadRequest("Valid ProductId is required.");
-                }
+            var added = await _commentRepo.AddCommentAsync(entity);
 
-                if (string.IsNullOrWhiteSpace(comment.Content))
-                {
-                    return BadRequest("Comment content is required.");
-                }
+            // đảm bảo repo load kèm User nếu cần (Include/Load Reference)
+            var result = ToDto(added);
 
-                if (string.IsNullOrWhiteSpace(comment.UserId))
-                {
-                    return BadRequest("UserName is required.");
-                }
-
-                // Set timestamps
-                comment.CreatedAt = DateTime.UtcNow;
-                comment.UpdatedAt = DateTime.UtcNow;
-
-                // Add comment to database
-                var addedComment = await _commentRepo.AddCommentAsync(comment);
-
-                return CreatedAtAction(
-                    nameof(GetCommentById),
-                    new { id = addedComment.Id },
-                    addedComment
-                );
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
-            }
+            return CreatedAtAction(nameof(GetCommentById), new { id = result.Id }, result);
         }
 
-        // PUT: api/comments/{id} - Cập nhật comment
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateComment(int id, [FromBody] Comment comment)
+        // ============== PUT: update (login required) ==============
+        [Authorize]
+        [HttpPut("{id:int}")]
+        [ProducesResponseType(typeof(CommentDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateComment(int id, [FromBody] UpdateCommentDto dto)
         {
-            try
-            {
-                if (comment == null)
-                {
-                    return BadRequest("Comment data is required.");
-                }
+            if (dto == null) return BadRequest("Comment data is required.");
 
-                if (id != comment.Id)
-                {
-                    return BadRequest("Comment ID mismatch.");
-                }
+            var existing = await _commentRepo.GetCommentByIdAsync(id);
+            if (existing == null) return NotFound();
 
-                var existingComment = await _commentRepo.GetCommentByIdAsync(id);
-                if (existingComment == null)
-                {
-                    return NotFound($"Comment with ID {id} not found.");
-                }
+            var userId = GetUserId();
+            if (userId is null or <= 0) return Unauthorized();
+            if (existing.UserId != userId.Value) return Forbid();
 
-                // Validation
-                if (string.IsNullOrWhiteSpace(comment.Content))
-                {
-                    return BadRequest("Comment content is required.");
-                }
+            existing.Content = dto.Content?.Trim() ?? existing.Content;
+            existing.UpdatedAt = DateTime.UtcNow;
 
-                // Update timestamp
-                comment.UpdatedAt = DateTime.UtcNow;
-                // Preserve original creation time
-                comment.CreatedAt = existingComment.CreatedAt;
-
-                await _commentRepo.UpdateCommentAsync(comment);
-
-                return Ok(comment);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
-            }
+            await _commentRepo.UpdateCommentAsync(existing);
+            return Ok(ToDto(existing));
         }
 
-        // DELETE: api/comments/{id} - Xóa comment
-        [HttpDelete("{id}")]
+        // ============== DELETE: (login required) ==============
+        [Authorize]
+        [HttpDelete("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteComment(int id)
         {
-            try
-            {
-                var existingComment = await _commentRepo.GetCommentByIdAsync(id);
-                if (existingComment == null)
-                {
-                    return NotFound($"Comment with ID {id} not found.");
-                }
+            var existing = await _commentRepo.GetCommentByIdAsync(id);
+            if (existing == null) return NotFound();
 
-                await _commentRepo.DeleteCommentAsync(id);
+            var userId = GetUserId();
+            if (userId is null or <= 0) return Unauthorized();
+            if (existing.UserId != userId.Value) return Forbid();
 
-                return Ok(new { message = $"Comment with ID {id} has been deleted successfully." });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
-            }
+            await _commentRepo.DeleteCommentAsync(id);
+            return Ok(new { message = "Comment deleted successfully." });
         }
 
-        // GET: api/comments - Lấy tất cả comments (có thể dùng cho admin)
+        // ============== GET: all (Admin only) ==============
+        [Authorize(Roles = "Admin")]
         [HttpGet]
+        [ProducesResponseType(typeof(IEnumerable<CommentDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAllComments()
         {
-            try
-            {
-                var comments = await _commentRepo.GetAllCommentsAsync();
-                return Ok(comments);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
-            }
+            var comments = await _commentRepo.GetAllCommentsAsync();
+            return Ok(comments.Select(ToDto).ToList());
         }
     }
 }

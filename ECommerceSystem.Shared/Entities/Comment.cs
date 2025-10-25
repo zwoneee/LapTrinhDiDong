@@ -11,13 +11,13 @@ namespace ECommerceSystem.Shared.Entities
     {
         public int Id { get; set; }
         public int ProductId { get; set; }
-        public string UserId { get; set; }
-        public string Content { get; set; }
+        public int UserId { get; set; } 
+        public string Content { get; set; } = default!;
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
 
         // Navigation properties
-        public Product Product { get; set; }
-        public User User { get; set; }
+        public Product Product { get; set; } = default!;
+        public User User { get; set; } = default!;
     }
 }

@@ -2,17 +2,20 @@
 @{
     ViewData["Title"] = "Chi tiết sản phẩm";
     Layout = "~/Views/Shared/_Layout.cshtml";
+
     var relatedProducts = ViewBag.RelatedProducts as List<ECommerceSystem.Shared.DTOs.Product.ProductDTO>;
-    // user rating passed from controller (int? or null)
-    int? userRating = ViewBag.UserRating as int?;
-    
+
+    // ----- FIX: Unbox ViewBag.UserRating chính xác -----
+    int? userRating = null;
+    if (ViewBag.UserRating is int i) userRating = i;
+    else if (ViewBag.UserRating is int?) userRating = (int?)ViewBag.UserRating;
+
     // --- Tách & gom mô tả thành các phần có ý nghĩa ---
     var rawDesc = (Model.Description ?? "").Replace("\r\n", "\n").Trim();
     var sections = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
     if (!string.IsNullOrWhiteSpace(rawDesc))
     {
-        // Các tiêu đề mong muốn (thứ tự ưu tiên tìm)
         var headers = new[]
         {
             "Cấu hình & Bộ nhớ",
@@ -23,7 +26,6 @@
             "Thiết kế & Chất liệu"
         };
 
-        // Tìm vị trí các tiêu đề trong văn bản
         var found = new List<(int pos, string header)>();
         foreach (var h in headers)
         {
@@ -33,30 +35,24 @@
 
         if (found.Any())
         {
-            // Sắp theo vị trí xuất hiện trong chuỗi
             var ordered = found.OrderBy(f => f.pos).ToList();
-            for (int i = 0; i < ordered.Count; i++)
+            for (int i2 = 0; i2 < ordered.Count; i2++)
             {
-                var start = ordered[i].pos;
-                var end = (i + 1 < ordered.Count) ? ordered[i + 1].pos : rawDesc.Length;
+                var start = ordered[i2].pos;
+                var end = (i2 + 1 < ordered.Count) ? ordered[i2 + 1].pos : rawDesc.Length;
                 var block = rawDesc.Substring(start, end - start).Trim();
 
-                // Loại bỏ tiêu đề ở đầu block nếu có
-                var header = ordered[i].header;
+                var header = ordered[i2].header;
                 var content = block;
                 if (content.Length >= header.Length && content.Substring(0, header.Length).Equals(header, StringComparison.OrdinalIgnoreCase))
-                {
                     content = content.Substring(header.Length).Trim(new char[] { ':', ' ', '\n', '\r' });
-                }
 
-                // Nếu content rỗng, fallback lấy một đoạn ngắn
                 if (string.IsNullOrWhiteSpace(content))
                     content = "(Không có mô tả chi tiết)";
 
                 sections[header] = content;
             }
 
-            // Nếu còn phần đầu (trước tiêu đề đầu tiên) thì thêm vào "Thông tin chung"
             var firstPos = ordered.First().pos;
             if (firstPos > 0)
             {
@@ -74,32 +70,41 @@
         }
         else
         {
-            // Nếu không tìm thấy tiêu đề, chia theo đoạn rỗng (paragraph)
             var parts = rawDesc.Split(new[] { "\n\n" }, StringSplitOptions.RemoveEmptyEntries)
                                .Select(p => p.Trim())
                                .Where(p => !string.IsNullOrWhiteSpace(p))
                                .ToList();
 
             if (parts.Count == 1)
-            {
                 sections["Thông tin sản phẩm"] = parts[0];
-            }
             else
-            {
-                for (int i = 0; i < parts.Count; i++)
-                {
-                    sections[$"Thông tin {i + 1}"] = parts[i];
-                }
-            }
+                for (int i3 = 0; i3 < parts.Count; i3++)
+                    sections[$"Thông tin {i3 + 1}"] = parts[i3];
         }
     }
 }
 <!-- Custom CSS -->
 <style>
-    .rating-stars { color: #ffc107; margin-bottom: 0.5rem; }
-    .star-btn { background: transparent; border: none; cursor: pointer; padding: 0 4px; }
-    .star-btn .fa-star { font-size: 1.05rem; }
-    .user-rated { color: #28a745; font-weight: 600; }
+    .rating-stars {
+        color: #ffc107;
+        margin-bottom: 0.5rem;
+    }
+
+    .star-btn {
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 0 4px;
+    }
+
+        .star-btn .fa-star {
+            font-size: 1.05rem;
+        }
+
+    .user-rated {
+        color: #28a745;
+        font-weight: 600;
+    }
 
     /* Accordion / specs styling */
     .specs-accordion .accordion-button {
@@ -107,15 +112,18 @@
         color: #374151;
         font-weight: 600;
     }
+
     .specs-accordion .accordion-body {
         background: #ffffff;
         color: #475569;
         line-height: 1.6;
     }
+
     .specs-accordion .spec-key {
         font-weight: 700;
         color: #0f172a;
     }
+
     .specs-accordion .spec-val {
         color: #334155;
     }
@@ -148,7 +156,7 @@
                     <div class="price-tag">@Model.Price.ToString("N0") đ</div>
                 </div>
 
-                <!-- Thay phần mô tả đơn bằng Accordion gom nhóm -->
+                <!-- Accordion mô tả -->
                 @if (sections != null && sections.Count > 0)
                 {
                     <div class="mb-4">
@@ -181,10 +189,10 @@
                                         <div class="accordion-body">
                                             @{
                                                 var lines = content
-                                                    .Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                                                    .Select(s => s.Trim())
-                                                    .Where(s => !string.IsNullOrWhiteSpace(s))
-                                                    .ToList();
+                                                .Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                                                .Select(s => s.Trim())
+                                                .Where(s => !string.IsNullOrWhiteSpace(s))
+                                                .ToList();
                                             }
                                             @foreach (var line in lines)
                                             {
@@ -193,7 +201,6 @@
                                         </div>
                                     </div>
                                 </div>
-
                                 idx++;
                             }
                         </div>
@@ -212,11 +219,14 @@
                 </div>
 
                 <div class="mb-2">
-                    <div id="product-rating" class="rating-stars" data-average="@Model.Rating.GetValueOrDefault(0)" data-user="@((object)userRating ?? "")">
+                    <div id="product-rating"
+                         class="rating-stars"
+                         data-average="@Model.Rating.GetValueOrDefault(0)"
+                         data-user="@(userRating?.ToString() ?? "")">
                         <!-- rendered by JS -->
                     </div>
                     <div class="small text-muted mt-1" id="rating-text">
-                        @(Model.Rating.HasValue ? Model.Rating.Value.ToString("0.0") : "Chưa có đánh giá")
+                        @(Model.Rating.HasValue? Model.Rating.Value.ToString("0.0") : "Chưa có đánh giá")
                     </div>
                 </div>
 
@@ -224,17 +234,20 @@
                 @if (User.Identity.IsAuthenticated)
                 {
                     <div class="mb-3">
-                        <span class="me-2">Đánh giá của bạn:</span>
-                        <div id="user-rating" style="display:inline-block;">
-                            @for (int i = 1; i <= 5; i++)
-                            {
-                                <button type="button" class="star-btn" data-value="@i" title="@i">
-                                    <i class="far fa-star"></i>
-                                </button>
-                            }
-                        </div>
-                        <span id="rating-feedback" class="ms-2 small text-success" style="display:none;">Cảm ơn bạn đã đánh giá!</span>
-                    </div>
+    <span class="me-2">Đánh giá của bạn:</span>
+    <div id="user-rating" style="display:inline-block;">
+        @for (int star = 1; star <= 5; star++)
+        {
+            <button type="button" class="star-btn" data-value="@star" title="@star">
+                <i class="far fa-star"></i>
+            </button>
+        }
+    </div>
+    <span id="rating-feedback" class="ms-2 small text-success" style="display:none;">
+        Cảm ơn bạn đã đánh giá!
+    </span>
+</div>
+
                 }
                 else
                 {
@@ -251,13 +264,10 @@
                             <button type="button" class="quantity-btn" onclick="decreaseQuantity()">
                                 <i class="fas fa-minus"></i>
                             </button>
-                            <!-- đặt name="quantity" để model binding nhận đúng -->
                             <input type="number" id="quantity" name="quantity" class="quantity-input" value="1" min="1" max="@Model.Stock" />
                             <button type="button" class="quantity-btn" onclick="increaseQuantity()">
                                 <i class="fas fa-plus"></i>
                             </button>
-
-                            <!-- productId gửi kèm -->
                             <input type="hidden" name="productId" value="@Model.Id" />
                         </div>
 
@@ -296,6 +306,24 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Comments Section -->
+    <div class="product-comments mt-5">
+        <h4>Bình luận sản phẩm</h4>
+
+        <input type="hidden" id="productId" value="@Model.Id" />
+        @if (User.Identity.IsAuthenticated)
+        {
+            <textarea id="commentInput" class="form-control mb-2" placeholder="Viết bình luận..."></textarea>
+            <button id="commentBtn" class="btn btn-primary mb-3">Gửi</button>
+        }
+        else
+        {
+            <p class="small text-muted">Vui lòng <a asp-controller="Account" asp-action="Login">đăng nhập</a> để bình luận</p>
+        }
+
+        <div id="commentsList" class="list-group"></div>
     </div>
 
     <!-- Sản phẩm liên quan -->
@@ -338,50 +366,38 @@
     }
 </div>
 
-<!-- JS xử lý nút tăng giảm số lượng -->
+<!-- JS xử lý số lượng -->
 <script>
     function increaseQuantity() {
         const quantityInput = document.getElementById('quantity');
-        const currentValue = parseInt(quantityInput.value);
-        const maxValue = parseInt(quantityInput.max);
+        const currentValue = parseInt(quantityInput.value || "1");
+        const maxValue = parseInt(quantityInput.max || "1");
         if (currentValue < maxValue) quantityInput.value = currentValue + 1;
     }
-
     function decreaseQuantity() {
         const quantityInput = document.getElementById('quantity');
-        const currentValue = parseInt(quantityInput.value);
-        const minValue = parseInt(quantityInput.min);
+        const currentValue = parseInt(quantityInput.value || "1");
+        const minValue = parseInt(quantityInput.min || "1");
         if (currentValue > minValue) quantityInput.value = currentValue - 1;
     }
-
-    // Thay vì alert, form sẽ POST tới /Cart/AddToCart.
-    // Nếu muốn AJAX, có thể bổ sung fetch/fetch with antiforgery token.
-
-    function addToWishlist() {
-        alert('Đã thêm vào danh sách yêu thích!');
-    }
-
-    // Giữ giá trị số lượng hợp lệ
     document.getElementById('quantity')?.addEventListener('input', function () {
-        const min = parseInt(this.min);
-        const max = parseInt(this.max);
+        const min = parseInt(this.min || "1");
+        const max = parseInt(this.max || this.value || "1");
         if (this.value < min) this.value = min;
         if (this.value > max) this.value = max;
     });
+    function addToWishlist() { alert('Đã thêm vào danh sách yêu thích!'); }
 </script>
 
 @section Scripts {
     <script>
         (function () {
             function renderStars(container, average) {
+                if (!container) return;
                 var avg = parseFloat(average) || 0;
                 var html = '';
                 for (var i = 1; i <= 5; i++) {
-                    if (i <= Math.floor(avg)) {
-                        html += '<i class="fas fa-star"></i>';
-                    } else {
-                        html += '<i class="far fa-star"></i>';
-                    }
+                    html += (i <= Math.floor(avg)) ? '<i class="fas fa-star"></i>' : '<i class="far fa-star"></i>';
                 }
                 container.innerHTML = html;
             }
@@ -401,19 +417,12 @@
                 starButtons.forEach(function (b) {
                     var val = parseInt(b.getAttribute('data-value'));
                     var icon = b.querySelector('i');
-                    if (val <= value) {
-                        icon.className = 'fas fa-star';
-                    } else {
-                        icon.className = 'far fa-star';
-                    }
+                    icon.className = (val <= value) ? 'fas fa-star' : 'far fa-star';
                 });
             }
 
-            if (userRating) {
-                highlightUserStars(userRating);
-            }
+            if (userRating) highlightUserStars(userRating);
 
-            // hover effect
             starButtons.forEach(function (btn) {
                 btn.addEventListener('mouseenter', function () {
                     var v = parseInt(this.getAttribute('data-value'));
@@ -423,7 +432,6 @@
                     });
                 });
                 btn.addEventListener('mouseleave', function () {
-                    // restore to user's rating if exists else to average display
                     if (userRating) highlightUserStars(userRating);
                     else renderStars(ratingContainer, avg);
                 });
@@ -445,36 +453,30 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'RequestVerificationToken': token
+                        'RequestVerificationToken': token // cần AddAntiforgery(HeaderName="RequestVerificationToken")
                     },
                     body: JSON.stringify({ productId: productId, value: value })
                 })
                 .then(async res => {
-                    if (!res.ok) {
-                        var text = await res.text();
-                        throw new Error(text || 'Lỗi server');
-                    }
+                    if (!res.ok) throw new Error(await res.text() || 'Lỗi server');
                     return res.json();
                 })
-                .then(data => {
-                    // Đặt userRating cục bộ để hiển thị ngay
+                .then(() => {
                     userRating = value;
                     highlightUserStars(userRating);
                     document.getElementById('rating-feedback').style.display = 'inline';
 
-                    // Cập nhật average bằng cách gọi public API product (có rating mới)
-                    fetch(`/api/public/products/${productId}`)
+                    // Cập nhật average mới
+                    fetch(`${BASE_URL}/api/public/products/${productId}`)
                         .then(r => r.json())
                         .then(p => {
                             var newAvg = parseFloat(p.rating) || 0;
                             avg = newAvg;
                             renderStars(ratingContainer, newAvg);
-                            ratingText.innerText = newAvg ? newAvg.toFixed(1) : 'Chưa có đánh giá';
+                            if (ratingText) ratingText.innerText = newAvg ? newAvg.toFixed(1) : 'Chưa có đánh giá';
                         });
 
-                    setTimeout(function () {
-                        document.getElementById('rating-feedback').style.display = 'none';
-                    }, 2200);
+                    setTimeout(() => document.getElementById('rating-feedback').style.display = 'none', 2200);
                 })
                 .catch(err => {
                     console.error(err);
@@ -483,4 +485,7 @@
             }
         })();
     </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
+     <script src="~/js/productComments.js"></script>
 }

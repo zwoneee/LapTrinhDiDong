@@ -26,7 +26,6 @@ function initUserChat() {
         console.error("❌ Token không tồn tại. Hãy login trước.");
         return;
     }
-    console.log("🚀 Token hiện tại:", token);
 
     // ====================== SIGNALR ======================
     connection = new signalR.HubConnectionBuilder()
@@ -36,7 +35,8 @@ function initUserChat() {
         .build();
 
     connection.on("ReceiveMessage", (fromId, message, sentAt, fileUrl, fileType, fileName) => {
-        appendMessage(fromId, message, sentAt, fileUrl, fileType, fileName);
+        const senderName = fromId === 1 ? "Hỗ trợ" : (currentUser.name || "Bạn");
+        appendMessage(fromId, message, sentAt, fileUrl, fileType, fileName, senderName);
     });
 
     connection.start()
@@ -51,7 +51,8 @@ function initUserChat() {
         console.log("🔄 Đang tải lịch sử...");
 
         try {
-            const response = await fetch("https://localhost:7068/api/chat/history", {
+            const url = "https://localhost:7068/api/chat/history";
+            const res = await fetch(url, {
                 method: "GET",
                 headers: {
                     "Authorization": `Bearer ${token}`,
@@ -59,12 +60,12 @@ function initUserChat() {
                 }
             });
 
-            if (!response.ok) {
-                console.error(`❌ Không thể tải lịch sử: ${response.status}`);
+            if (!res.ok) {
+                console.error(`❌ Không thể tải lịch sử: ${res.status}`);
                 return;
             }
 
-            const messages = await response.json();
+            const messages = await res.json();
             console.log("✅ Lịch sử tin nhắn:", messages);
             renderMessages(messages);
         } catch (error) {
@@ -104,73 +105,35 @@ function initUserChat() {
         const formData = new FormData();
         formData.append("file", file);
 
-        try {
-            const res = await fetch("https://localhost:7068/api/chat/upload", {
-                method: "POST",
-                body: formData,
-                headers: {
-                    "Authorization": `Bearer ${token}`
-                }
-            });
+        const res = await fetch("https://localhost:7068/api/chat/upload", {
+            method: "POST",
+            body: formData,
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!res.ok) return null;
 
-            if (!res.ok) {
-                const text = await res.text();
-                console.error("❌ Upload failed:", res.status, text);
-                throw new Error("Upload failed");
-            }
-
-            const data = await res.json();
-            console.log("✅ Upload thành công:", data);
-            return data;
-        } catch (err) {
-            console.error("❌ Upload file thất bại:", err);
-            return null;
-        }
+        const data = await res.json();
+        return data;
     }
 
     // ====================== SEND MESSAGE ======================
     async function sendMessage() {
         const msg = input.value.trim();
         const file = window.selectedFile;
-
         if (!msg && !file) return;
 
-        if (file) {
-            const result = await uploadFile(file);
-            if (!result) return;
-            window.selectedFileUrl = result.url;
-            window.selectedFileName = result.fileName;
-            window.selectedFileType = result.fileType;
-        }
+        let uploadData = null;
+        if (file) uploadData = await uploadFile(file);
 
         const payload = {
             FromUserId: parseInt(currentUser.id),
             ToUserId: 1,
-            Content: msg || "",
-            FileUrl: window.selectedFileUrl || null,
-            FileName: window.selectedFileName || null,
-            FileType: window.selectedFileType || null
+            Content: msg,
+            FileUrl: uploadData?.url || null,
+            FileName: uploadData?.fileName || null,
+            FileType: uploadData?.fileType || null
         };
 
-        if (connection && connection.state === "Connected") {
-            connection.invoke("SendMessageFromCustomer", payload)
-                .then(() => {
-                    appendMessage(currentUser.id, payload.Content, new Date().toISOString(),
-                        payload.FileUrl, payload.FileType, payload.FileName);
-                    resetInput();
-                })
-                .catch(err => {
-                    console.warn("⚠️ SignalR lỗi, fallback API:", err);
-                    sendMessageFallback(payload);
-                });
-        } else {
-            console.warn("⚠️ SignalR chưa kết nối, fallback API");
-            sendMessageFallback(payload);
-        }
-    }
-
-    // ====================== FALLBACK API ======================
-    async function sendMessageFallback(payload) {
         try {
             const res = await fetch("https://localhost:7068/api/chat/customer/send", {
                 method: "POST",
@@ -181,14 +144,13 @@ function initUserChat() {
                 body: JSON.stringify(payload)
             });
 
-            if (!res.ok) throw new Error("Server returned " + res.status);
-
-            const data = await res.json().catch(() => ({ sentAt: new Date().toISOString() }));
-            appendMessage(currentUser.id, payload.Content, data.sentAt || new Date().toISOString(),
-                payload.FileUrl, payload.FileType, payload.FileName);
-            resetInput();
+            if (res.ok) {
+                const data = await res.json();
+                appendMessage(currentUser.id, msg, data.sentAt, data.fileUrl, data.fileType, data.fileName, "Bạn");
+                resetInput();
+            }
         } catch (err) {
-            console.error("❌ Gửi tin qua API thất bại:", err);
+            console.error("❌ Gửi tin thất bại:", err);
         }
     }
 
@@ -201,22 +163,17 @@ function initUserChat() {
 
         let fileHtml = "";
         if (fileUrl) {
-            if (fileType === "image") {
-                fileHtml = `<div><img src="${fileUrl}" style="max-width:150px; border-radius:6px;" /></div>`;
-            } else if (fileType === "video") {
-                fileHtml = `<div><video src="${fileUrl}" controls style="max-width:200px; border-radius:6px;"></video></div>`;
-            } else {
-                fileHtml = `<div><a href="${fileUrl}" target="_blank">${fileName}</a></div>`;
-            }
+            if (fileType === "image") fileHtml = `<img src="${fileUrl}" style="max-width:150px;border-radius:6px;">`;
+            else if (fileType === "video") fileHtml = `<video src="${fileUrl}" controls style="max-width:200px;border-radius:6px;"></video>`;
+            else fileHtml = `<a href="${fileUrl}" target="_blank">${fileName}</a>`;
         }
 
         div.innerHTML = `
-            <div style="display:inline-block; background:${isMe ? "#0d6efd" : "#e9ecef"};
-                        color:${isMe ? "white" : "black"}; padding:6px 10px; border-radius:10px; max-width:80%;">
-                <strong>${senderName || (isMe ? "Bạn" : "Hỗ trợ")}:</strong> ${message || ""}
-                ${fileHtml}
+            <div style="display:inline-block;background:${isMe ? "#0d6efd" : "#e9ecef"};
+                        color:${isMe ? "white" : "black"};padding:6px 10px;border-radius:10px;max-width:80%;">
+                <strong>${senderName}:</strong> ${message || ""} ${fileHtml}
             </div>
-            <div style="font-size:10px; color:gray;">${time}</div>
+            <div style="font-size:10px;color:gray;">${time}</div>
         `;
 
         messagesDiv.appendChild(div);
@@ -225,26 +182,16 @@ function initUserChat() {
 
     function resetInput() {
         input.value = "";
-        window.selectedFile = null;
-        window.selectedFileUrl = null;
-        window.selectedFileType = null;
-        window.selectedFileName = null;
         fileInput.value = "";
-        input.focus();
+        window.selectedFile = null;
     }
 
-    // ====================== EVENT LISTENERS ======================
+    // ====================== EVENTS ======================
     sendBtn.addEventListener("click", sendMessage);
     input.addEventListener("keypress", e => { if (e.key === "Enter") sendMessage(); });
-    fileInput.addEventListener("change", e => {
-        const file = e.target.files[0];
-        if (!file) return;
-        window.selectedFile = file;
-        console.log("📎 Đã chọn file:", file.name, file.type, file.size);
-    });
+    fileInput.addEventListener("change", e => window.selectedFile = e.target.files[0]);
 }
 
 $(document).ready(() => {
-    console.log("💬 Chat JS ready!");
     initUserChat();
 });

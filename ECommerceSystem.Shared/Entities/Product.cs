@@ -17,5 +17,6 @@ namespace ECommerceSystem.Shared.Entities
         public bool IsDeleted { get; set; }
         
         public string? Slug { get; set; }
+        public ICollection<Comment> Comments { get; set; } = new List<Comment>();
     }
 }

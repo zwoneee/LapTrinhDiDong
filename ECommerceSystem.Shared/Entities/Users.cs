@@ -9,6 +9,7 @@ namespace ECommerceSystem.Shared.Entities
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public bool IsDeleted { get; set; }
+        public ICollection<Comment> Comments { get; set; } = new List<Comment>();
     }
 
     public class Role : IdentityRole<int> // Use int as the key type
