@@ -14,6 +14,7 @@ const connection = new signalR.HubConnectionBuilder()
 
 let currentUserId = null;
 let adminId = null;
+const appendedMessageIds = new Set(); // dedupe set
 
 // ==================== GET ADMIN ID FROM JWT ====================
 function parseJwt(token) {
@@ -29,17 +30,13 @@ function parseJwt(token) {
     }
 }
 
-// Lấy payload từ token
 const payload = parseJwt(token);
-
-// ✅ Lấy role đúng và xác định adminId
-const roles = payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] || [];
-if (roles.includes("Admin")) {
-    adminId = parseInt(payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] || 1);
+const roles = payload?.["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] || [];
+if (Array.isArray(roles) ? roles.includes("Admin") : roles === "Admin") {
+    adminId = parseInt(payload?.["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] || 1);
 } else {
     alert("Token không hợp lệ hoặc không phải admin!");
 }
-
 
 // ==================== LOAD USER LIST ====================
 async function loadUserList() {
@@ -47,24 +44,24 @@ async function loadUserList() {
         const res = await fetch("https://localhost:7068/api/chat/users", {
             headers: { "Authorization": "Bearer " + token }
         });
-        if (!res.ok) throw new Error("HTTP " + res.status);
+        if (!res.ok) {
+            const txt = await res.text();
+            console.error("❌ /api/chat/users failed:", res.status, txt);
+            return;
+        }
         const users = await res.json();
 
         const listDiv = document.getElementById("userList");
+        if (!listDiv) return;
         listDiv.innerHTML = "";
         users.forEach(u => {
+            const id = u.id ?? u.Id;
+            const email = u.email ?? u.Email ?? u.UserName ?? ("User#" + id);
             const div = document.createElement("div");
-<<<<<<< HEAD
-            div.className = "user-item p-2 border-bottom cursor-pointer";
+            div.className = "user-item p-2 border-bottom";
             div.style.cursor = "pointer";
-            div.textContent = u.email || u.Email;
-            div.onclick = () => selectUser(u.id || u.Id);
-=======
-            div.className = "p-2 border-bottom user-item";
-            div.style.cursor = "pointer";
-            div.textContent = u.email;
-            div.onclick = () => openChat(u.id, u.email);
->>>>>>> 9bac73a69c8e25903086b61bc71a5365200063e8
+            div.textContent = email;
+            div.onclick = () => openChat(id, email);
             listDiv.appendChild(div);
         });
     } catch (err) {
@@ -75,12 +72,14 @@ async function loadUserList() {
 // ==================== OPEN CHAT ====================
 async function openChat(userId, email) {
     currentUserId = userId;
-    document.getElementById("chatTitle").textContent = "💬 Chat với " + email;
-    document.getElementById("chatMessages").innerHTML = "";
+    const title = document.getElementById("chatTitle");
+    if (title) title.textContent = "💬 Chat với " + email;
+    const messages = document.getElementById("chatMessages");
+    if (messages) messages.innerHTML = "";
 
     await loadChatHistory(userId);
 
-    localStorage.setItem("currentChatUserId", userId);
+    localStorage.setItem("currentChatUserId", String(userId));
     localStorage.setItem("currentChatUserEmail", email);
 }
 
@@ -88,30 +87,47 @@ async function openChat(userId, email) {
 async function loadChatHistory(userId) {
     try {
         const res = await fetch(`https://localhost:7068/api/chat/history?withUserId=${userId}`, {
-<<<<<<< HEAD
-            headers: { "Authorization": `Bearer ${token}` }
-=======
             headers: { "Authorization": "Bearer " + token }
->>>>>>> 9bac73a69c8e25903086b61bc71a5365200063e8
         });
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        const messages = await res.json();
-<<<<<<< HEAD
-        const filtered = messages.filter(m =>
-            m.fromUserId === userId || m.toUserId === userId
-        );
-=======
->>>>>>> 9bac73a69c8e25903086b61bc71a5365200063e8
+
+        if (!res.ok) {
+            const txt = await res.text();
+            console.error("❌ /api/chat/history failed:", res.status, txt);
+            return;
+        }
+
+        const contentType = res.headers.get('content-type') || '';
+        let messages;
+        if (contentType.includes('application/json')) {
+            try {
+                messages = await res.json();
+            } catch (e) {
+                console.error("❌ Failed to parse JSON from /api/chat/history:", e);
+                return;
+            }
+        } else {
+            const txt = await res.text();
+            console.warn("⚠️ /api/chat/history returned non-JSON:", txt);
+            return;
+        }
 
         console.log("💬 Lịch sử user:", messages);
 
         const chatDiv = document.getElementById("chatMessages");
+        if (!chatDiv) return;
         chatDiv.innerHTML = "";
 
         messages.forEach(msg => {
-            const senderId = msg.senderI ?? msg.fromUserId;
+            // dedupe by Id if server provided it in history
+            const id = msg.id ?? msg.Id ?? null;
+            if (id && appendedMessageIds.has(id)) return;
+            if (id) appendedMessageIds.add(id);
+
+            const senderId = msg.fromUserId ?? msg.FromUserId ?? msg.fromId ?? msg.senderId ?? msg.senderI;
+            const content = msg.content ?? msg.Content ?? "";
+            const sentAt = msg.sentAt ?? msg.SentAt ?? null;
             const sender = (senderId === adminId) ? "Admin" : "User";
-            appendMessage(sender, msg.content, msg.sentAt);
+            appendMessage(sender, content, sentAt);
         });
 
         scrollToBottom();
@@ -128,85 +144,105 @@ function appendMessage(sender, content, time = null) {
     div.className = sender === "Admin" ? "text-end mb-2" : "text-start mb-2";
     div.innerHTML = `
         <div class="d-inline-block px-2 py-1 rounded ${sender === "Admin" ? "bg-primary text-white" : "bg-light"}">
-            <strong>${sender}:</strong> ${content}
+            <strong>${sender}:</strong> ${escapeHtml(content)}
         </div>
         <div class="text-muted" style="font-size:0.8em;">${timeStr}</div>
     `;
-    document.getElementById("chatMessages").appendChild(div);
+    const container = document.getElementById("chatMessages");
+    if (container) container.appendChild(div);
 }
 
 function scrollToBottom() {
     const div = document.getElementById("chatMessages");
-    div.scrollTop = div.scrollHeight;
+    if (div) div.scrollTop = div.scrollHeight;
+}
+
+// small helper to avoid injecting raw HTML from messages
+function escapeHtml(unsafe) {
+    return String(unsafe)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 // ==================== SEND MESSAGE ====================
 async function sendAdminMessage() {
     const input = document.getElementById("chatMessageInput");
-    const message = input.value.trim();
+    const sendBtn = document.getElementById("sendChatBtn") || document.getElementById("sendChatMessage");
+    const message = input?.value.trim();
     if (!message || !currentUserId) return;
+
+    // disable button while waiting for server to persist + broadcast
+    if (sendBtn) sendBtn.disabled = true;
 
     try {
         const payload = { FromUserId: adminId, ToUserId: currentUserId, Content: message };
+        console.log("➡️ POST /api/chat/admin/send payload:", payload);
 
         const res = await fetch("https://localhost:7068/api/chat/admin/send", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
+                "Authorization": "Bearer " + token
             },
             body: JSON.stringify(payload)
         });
 
-        if (res.ok) {
-            const data = await res.json();
-            appendMessage("Admin", data.content, data.sentAt);
-            scrollToBottom();
-            input.value = "";
+        if (!res.ok) {
+            const txt = await res.text().catch(() => "");
+            console.error("❌ Gửi tin nhắn thất bại:", res.status, txt);
+            return;
         }
+
+        // Do NOT append locally here; server will broadcast the persisted message back via SignalR.
+        // Clearing input is fine so user can type next message.
+        if (input) input.value = "";
     } catch (err) {
         console.error("❌ Gửi tin nhắn lỗi:", err);
+    } finally {
+        if (sendBtn) sendBtn.disabled = false;
     }
 }
 
 // ==================== RECEIVE MESSAGE REALTIME ====================
 connection.on("ReceiveMessage", (message) => {
-    const fromId = message.senderI ?? message.fromUserId;
-    const toId = message.toUserId;
+    // message may be an object or different shapes depending on sender
+    const fromId = message?.fromUserId ?? message?.FromUserId ?? message?.fromId ?? message?.senderId ?? message?.senderI;
+    const toId = message?.toUserId ?? message?.ToUserId;
+    const content = message?.content ?? message?.Content ?? (typeof message === "string" ? message : "");
+    const id = message?.id ?? message?.Id ?? null;
+    const sentAt = message?.sentAt ?? message?.SentAt ?? null;
 
-<<<<<<< HEAD
-    const div = document.createElement("div");
-    div.className = isMe ? "text-end my-1" : "text-start my-1";
-    div.innerHTML = `
-        <div style="display:inline-block; background:${isMe ? "#007bff" : "#e9ecef"}; color:${isMe ? "white" : "black"}; padding:6px 10px; border-radius:10px; max-width:80%;">
-            ${isMe ? "Admin" : "User"}: ${message}
-        </div>
-        <div style="font-size:10px; color:gray;">${time}</div>
-    `;
+    if (!fromId && !toId && !content) return;
 
-    chatBox.appendChild(div);
-    chatBox.scrollTop = chatBox.scrollHeight;
-}
+    // dedupe by Id if available
+    if (id && appendedMessageIds.has(id)) return;
+    if (id) appendedMessageIds.add(id);
 
-// ====================== 🔔 Thông báo user khác ======================
-function showNotification(userId, message) {
+    if (fromId === adminId && toId === currentUserId) {
+        appendMessage("Admin", content, sentAt);
+        scrollToBottom();
+    } else if (fromId === currentUserId) {
+        appendMessage("User", content, sentAt);
+        scrollToBottom();
+    } else {
+        // new message from other user -> visual hint in user list
+        console.log(`📨 Tin mới từ user #${fromId}`);
+        highlightUserInList(fromId);
+    }
+});
+
+function highlightUserInList(userId) {
     const listDiv = document.getElementById("userList");
-    const userItem = [...listDiv.children].find(el => el.textContent.includes(userId));
+    if (!listDiv) return;
+    const userItem = Array.from(listDiv.children).find(el => el.onclick && el.onclick.toString().includes(String(userId)));
     if (userItem) {
         userItem.style.backgroundColor = "#ffeeba";
         setTimeout(() => userItem.style.backgroundColor = "", 2000);
-=======
-    if (fromId === adminId && toId === currentUserId) {
-        appendMessage("Admin", message.content, message.sentAt);
-        scrollToBottom();
-    } else if (fromId === currentUserId) {
-        appendMessage("User", message.content, message.sentAt);
-        scrollToBottom();
-    } else {
-        console.log(`📨 Tin mới từ user #${fromId}`);
->>>>>>> 9bac73a69c8e25903086b61bc71a5365200063e8
     }
-});
+}
 
 // ==================== KẾT NỐI SIGNALR ====================
 connection.start()
@@ -222,8 +258,21 @@ connection.start()
     })
     .catch(err => console.error("❌ SignalR error:", err));
 
-// ==================== EVENTS ====================
-document.getElementById("sendChatMessage").addEventListener("click", sendAdminMessage);
-document.getElementById("chatMessageInput").addEventListener("keydown", e => {
-    if (e.key === "Enter") sendAdminMessage();
+// ==================== EVENTS (attach after DOM ready) ====================
+document.addEventListener("DOMContentLoaded", () => {
+    const sendBtn = document.getElementById("sendChatBtn") || document.getElementById("sendChatMessage");
+    const input = document.getElementById("chatMessageInput");
+
+    // avoid double-binding
+    if (sendBtn && !sendBtn.dataset.bound) {
+        sendBtn.addEventListener("click", sendAdminMessage);
+        sendBtn.dataset.bound = "1";
+    }
+
+    if (input && !input.dataset.bound) {
+        input.addEventListener("keydown", e => {
+            if (e.key === "Enter") sendAdminMessage();
+        });
+        input.dataset.bound = "1";
+    }
 });

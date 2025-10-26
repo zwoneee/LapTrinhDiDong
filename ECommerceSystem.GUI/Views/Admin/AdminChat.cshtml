@@ -21,22 +21,4 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
 <script src="~/js/adminchat.js"></script>
 
-<script>
-    document.getElementById("sendChatBtn").addEventListener("click", sendAdminMessage);
-    document.getElementById("chatMessageInput").addEventListener("keypress", e => {
-        if (e.key === "Enter") sendAdminMessage();
-    });
-        document.addEventListener("DOMContentLoaded", function() {
-        // Gọi API để lấy lịch sử chat
-        fetch("/api/chat/history?withUserId=USER_ID")
-            .then(response => response.json())
-            .then(data => {
-                const chatMessagesContainer = document.getElementById("chatMessages");
-                data.forEach(message => {
-                    const messageElement = document.createElement("div");
-                    messageElement.textContent = message.Content;
-                    chatMessagesContainer.appendChild(messageElement);
-                });
-            });
-    });
-</script>
+

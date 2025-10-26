@@ -15,8 +15,8 @@ namespace ECommerceSystem.Shared.Entities
         public bool IsRead { get; set; } = false;
 
         // Quan hệ với User
-        public User FromUser { get; set; }
-        public User ToUser { get; set; }
+        public User? FromUser { get; set; }
+        public User? ToUser { get; set; }
 
         // --- Mở rộng để gửi file/ảnh/video ---
         public string? FileName { get; set; }        // Tên file gốc
