@@ -7,6 +7,8 @@ window.selectedFileUrl = null;
 window.selectedFileType = null;
 window.selectedFileName = null;
 
+const appendedMessageIds = new Set();
+
 function initUserChat() {
     if (isChatInitialized) return;
     isChatInitialized = true;
@@ -34,9 +36,59 @@ function initUserChat() {
         .configureLogging(signalR.LogLevel.Information)
         .build();
 
-    connection.on("ReceiveMessage", (fromId, message, sentAt, fileUrl, fileType, fileName) => {
-        const senderName = fromId === 1 ? "Hỗ trợ" : (currentUser.name || "Bạn");
-        appendMessage(fromId, message, sentAt, fileUrl, fileType, fileName, senderName);
+    // Robust handler: accept either positional args or a single object payload
+    connection.on("ReceiveMessage", (...args) => {
+        // Cases:
+        // 1) Server sent positional args: (fromId, message, sentAt, fileUrl, fileType, fileName)
+        // 2) Server sent a single object: { fromUserId, toUserId, content, sentAt, FileUrl/... }
+        // 3) Server sent entity object (EF) with PascalCase properties
+        try {
+            if (args.length === 0) return;
+
+            let payload;
+            if (args.length === 1 && typeof args[0] === "object" && args[0] !== null) {
+                // single-object payload
+                payload = args[0];
+            } else {
+                // positional payload -> normalize into object
+                payload = {
+                    fromUserId: args[0],
+                    content: args[1],
+                    sentAt: args[2],
+                    fileUrl: args[3],
+                    fileType: args[4],
+                    fileName: args[5]
+                };
+            }
+
+            // normalize property names (pascalCase / camelCase)
+            const fromId = payload.fromUserId ?? payload.FromUserId ?? payload.fromId ?? payload.FromId ?? null;
+            const toId = payload.toUserId ?? payload.ToUserId ?? payload.toId ?? payload.ToId ?? null;
+            const content = payload.content ?? payload.Content ?? "";
+            const sentAt = payload.sentAt ?? payload.SentAt ?? null;
+            const fileUrl = payload.fileUrl ?? payload.FileUrl ?? null;
+            const fileType = payload.fileType ?? payload.FileType ?? null;
+            const fileName = payload.fileName ?? payload.FileName ?? null;
+            const id = payload.id ?? payload.Id ?? null;
+
+            // Debug log
+            console.log("🔔 ReceiveMessage (normalized):", { id, fromId, toId, content, sentAt, fileUrl, fileType, fileName });
+
+            // dedupe if id available
+            if (id && appendedMessageIds.has(id)) {
+                console.log("🔕 Duplicate message ignored (id):", id);
+                return;
+            }
+            if (id) appendedMessageIds.add(id);
+
+            // Determine sender name
+            const senderName = (fromId === 1 || parseInt(fromId) === 1) ? "Hỗ trợ" : (currentUser.name || "Bạn");
+
+            // Append appropriately
+            appendMessage(fromId, content, sentAt, fileUrl, fileType, fileName, senderName);
+        } catch (err) {
+            console.error("❌ Error processing ReceiveMessage:", err, args);
+        }
     });
 
     connection.start()
@@ -87,13 +139,15 @@ function initUserChat() {
         chatMessages.innerHTML = "";
 
         messages.forEach(msg => {
-            const senderName =
-                msg.fromUserId === parseInt(currentUser.id)
-                    ? currentUser.name || "Bạn"
-                    : "Hỗ trợ";
+            const id = msg.id ?? msg.Id ?? null;
+            if (id && appendedMessageIds.has(id)) return;
+            if (id) appendedMessageIds.add(id);
+
+            const fromUserId = msg.fromUserId ?? msg.FromUserId ?? msg.fromId ?? msg.FromId;
+            const senderName = (fromUserId === 1 || parseInt(fromUserId) === 1) ? "Hỗ trợ" : (window.currentUser?.name || "Bạn");
 
             appendMessage(
-                msg.fromUserId,
+                fromUserId,
                 msg.Content ?? msg.content ?? "",
                 msg.SentAt ?? msg.sentAt,
                 msg.FileUrl ?? msg.fileUrl,
@@ -158,29 +212,30 @@ function initUserChat() {
                 body: JSON.stringify(payload)
             });
 
-            // Read response body for debugging even on non-OK statuses
             const contentType = res.headers.get("content-type") || "";
-            const resText = contentType.includes("application/json") ? await res.text().catch(() => "") : await res.text().catch(() => "");
+            const resText = await res.text().catch(() => "");
 
             if (!res.ok) {
                 console.error("❌ Gửi tin thất bại:", res.status, resText || "<empty body>");
                 return;
             }
 
-            // try parse JSON if possible
             let data = null;
-            if (contentType.includes("application/json")) {
+            if (contentType.includes("application/json") && resText) {
                 try { data = JSON.parse(resText); } catch (e) { console.warn("⚠️ customer/send returned invalid JSON:", e); }
             }
 
-            // Use server fields if available, otherwise fallback to local values
+            // If server returns persisted message with Id, the ReceiveMessage broadcast will append it.
+            // We keep local optimistic append only if broadcast isn't received quickly.
             const sentAt = data?.SentAt ?? data?.sentAt ?? new Date().toISOString();
             const fileUrl = data?.FileUrl ?? uploadData?.url ?? null;
             const fileType = data?.FileType ?? uploadData?.fileType ?? null;
             const fileName = data?.FileName ?? uploadData?.fileName ?? null;
 
+            // Append optimistic for instant feedback; dedupe will ignore server echo later if id present
             appendMessage(currentUser.id, payload.Content, sentAt, fileUrl, fileType, fileName, "Bạn");
-            resetInput();
+            input.value = "";
+            resetFileInput(fileInput);
         } catch (err) {
             console.error("❌ Gửi tin thất bại (network):", err);
         }
@@ -212,10 +267,15 @@ function initUserChat() {
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
 
-    function resetInput() {
-        input.value = "";
+    function resetFileInput(fileInput) {
+        if (!fileInput) return;
         fileInput.value = "";
         window.selectedFile = null;
+    }
+
+    function resetInput() {
+        input.value = "";
+        resetFileInput(fileInput);
     }
 
     // ====================== EVENTS ======================
