@@ -384,10 +384,15 @@
                                             @product.Price.ToString("N0") đ
                                         </div>
 
+                                        @* Replace the hardcoded rating block with a dynamic one that uses product.Rating *@
                                         <div class="rating-stars">
+                                            @{
+                                                var avg = product.Rating.GetValueOrDefault(0.0f);
+                                                var fullStars = (int)System.Math.Floor(avg);
+                                            }
                                             @for (int i = 1; i <= 5; i++)
                                             {
-                                                if (i <= 4)
+                                                if (i <= fullStars)
                                                 {
                                                     <i class="fas fa-star"></i>
                                                 }
@@ -396,7 +401,7 @@
                                                     <i class="far fa-star"></i>
                                                 }
                                             }
-                                            <span class="ms-1">(4.0)</span>
+                                            <span class="ms-1">(@(avg > 0 ? avg.ToString("0.0") : "Chưa có"))</span>
                                         </div>
 
                                         <div class="product-meta">

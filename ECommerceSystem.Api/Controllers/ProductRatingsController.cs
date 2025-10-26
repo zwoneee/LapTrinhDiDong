@@ -4,6 +4,8 @@ using ECommerceSystem.Shared.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.DependencyInjection; // <- added
 using System.Security.Claims;
 
 namespace EcommerceSystem.API.Controllers
@@ -14,10 +16,15 @@ namespace EcommerceSystem.API.Controllers
     public class ProductRatingsController : ControllerBase
     {
         private readonly WebDBContext _dbContext;
+        private readonly IDistributedCache _cache;
 
-        public ProductRatingsController(WebDBContext dbContext)
+        // Mark the intended constructor explicitly so the DI container
+        // doesn't get confused if there are multiple constructors present.
+        [ActivatorUtilitiesConstructor]
+        public ProductRatingsController(WebDBContext dbContext, IDistributedCache cache)
         {
             _dbContext = dbContext;
+            _cache = cache;
         }
 
         // POST /api/user/products/{id}/rate
@@ -67,11 +74,21 @@ namespace EcommerceSystem.API.Controllers
             _dbContext.Products.Update(product);
             await _dbContext.SaveChangesAsync();
 
+            // Invalidate product-list caches by bumping a small version token used in cache keys
+            try
+            {
+                var newVersion = DateTime.UtcNow.Ticks.ToString();
+                await _cache.SetStringAsync("products_cache_version", newVersion);
+            }
+            catch
+            {
+                // ignore cache errors — rating already persisted
+            }
+
             return Ok(new { average = avg });
         }
 
-        // NEW: GET /api/user/products/{id}/rating
-        // Trả về rating của user hiện tại cho product (hoặc null)
+        // GET /api/user/products/{id}/rating
         [HttpGet("{id}/rating")]
         public async Task<IActionResult> GetUserRating(int id)
         {
@@ -83,7 +100,6 @@ namespace EcommerceSystem.API.Controllers
                 .AsNoTracking()
                 .FirstOrDefaultAsync(r => r.ProductId == id && r.UserId == userId);
 
-            // Trả về object { value = int? } (null nếu chưa rating)
             var value = existing != null ? (int?)existing.Value : null;
             return Ok(new { value });
         }

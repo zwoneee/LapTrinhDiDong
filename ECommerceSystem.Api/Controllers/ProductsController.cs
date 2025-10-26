@@ -37,7 +37,10 @@ namespace ECommerceSystem.Api.Controllers
             int page = 1,
             int pageSize = 10)
         {
-            var cacheKey = $"products_{search}_{categoryId}_{minPrice}_{maxPrice}_{sortBy}_{promotion}_{page}_{pageSize}";
+            // read a lightweight cache-version token so we can invalidate all product-list caches
+            var cacheVersion = await _cache.GetStringAsync("products_cache_version") ?? "1";
+
+            var cacheKey = $"products_{cacheVersion}_{search}_{categoryId}_{minPrice}_{maxPrice}_{sortBy}_{promotion}_{page}_{pageSize}";
             var cachedResult = await _cache.GetStringAsync(cacheKey);
 
             if (!string.IsNullOrEmpty(cachedResult))
@@ -92,7 +95,7 @@ namespace ECommerceSystem.Api.Controllers
 
             var result = new { total, page, pageSize, products };
 
-            // Cache Redis
+            // Cache Redis (with version token part of key)
             try
             {
                 await _cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(result), new DistributedCacheEntryOptions
