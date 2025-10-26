@@ -21,6 +21,9 @@ if (window.__commentsBootstrapped) {
     const commentInput = document.getElementById("commentInput");
     const commentBtn = document.getElementById("commentBtn");
 
+    // ensure a fallback so scripts don't crash if BASE_URL isn't set
+    const API_BASE = (window.BASE_URL && window.BASE_URL.toString()) || '';
+
     /* ====================== DOM HELPERS ====================== */
     function addCommentToDOM(comment, prepend = false) {
         if (!commentsList) return;
@@ -43,7 +46,7 @@ if (window.__commentsBootstrapped) {
         try {
             if (!commentsList) return;
             console.log("🔄 Loading comments...");
-            const res = await fetch(`${BASE_URL}/api/comments/product/${productId}`, {
+            const res = await fetch(`${API_BASE}/api/comments/product/${productId}`, {
                 headers: token ? { Authorization: "Bearer " + token } : {}
             });
 

@@ -489,6 +489,12 @@
         });
     </script>
 
+    <! -- add this near the end of the <body> before other scripts -->
+<script>
+    // Provide an absolute origin for client-side code that expects BASE_URL
+    // Example result: "https://localhost:7171"
+    window.BASE_URL = '@($"{ViewContext.HttpContext.Request.Scheme}://{ViewContext.HttpContext.Request.Host}")';
+</script>
 
 </body>
 </html>

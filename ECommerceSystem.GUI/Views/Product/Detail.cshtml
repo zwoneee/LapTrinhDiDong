@@ -467,7 +467,7 @@
                     document.getElementById('rating-feedback').style.display = 'inline';
 
                     // Cập nhật average mới
-                    fetch(`${BASE_URL}/api/public/products/${productId}`)
+                    fetch(`/api/public/products/${productId}`)
                         .then(r => r.json())
                         .then(p => {
                             var newAvg = parseFloat(p.rating) || 0;
@@ -487,5 +487,5 @@
     </script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
-     <script src="~/js/productComments.js"></script>
+    <script src="~/js/productComments.js"></script>
 }
