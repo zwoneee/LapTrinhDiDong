@@ -3,6 +3,7 @@ using ECommerceSystem.Shared.DTOs.Models;
 using ECommerceSystem.Shared.DTOs.User;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Http;
 using Refit;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -104,7 +105,7 @@ public class AuthService
     public async Task LogoutAsync()
     {
         var response = _httpContextAccessor.HttpContext?.Response;
-        response?.Cookies.Delete(TokenCookieName);
+        response?.Cookies.Delete("AuthToken");
 
         await _httpContextAccessor.HttpContext.SignOutAsync("MyCookieAuth");
     }

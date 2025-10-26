@@ -137,6 +137,7 @@ namespace ECommerceSystem.Api.Repositories
                     Total = cart.CartDetails.Sum(i => i.Quantity * i.UnitPrice),
                     Status = "Pending",
                     DeliveryLocation = model.Address,
+                    QrCode = string.Empty,
                     CreatedAt = DateTime.UtcNow,
                     OrderItems = cart.CartDetails.Select(i => new OrderItem
                     {
