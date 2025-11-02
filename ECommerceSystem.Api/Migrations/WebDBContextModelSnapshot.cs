@@ -197,7 +197,6 @@ namespace EcommerceSystem.API.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("QrCode")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Status")

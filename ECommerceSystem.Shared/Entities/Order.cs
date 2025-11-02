@@ -8,7 +8,7 @@ namespace ECommerceSystem.Shared.Entities
         public decimal Total { get; set; }
         public string Status { get; set; }
         public string DeliveryLocation { get; set; }
-        public string QrCode { get; set; }
+        public string? QrCode { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public bool IsDeleted { get; set; }

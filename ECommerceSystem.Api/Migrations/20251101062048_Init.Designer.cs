@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EcommerceSystem.API.Migrations
 {
     [DbContext(typeof(WebDBContext))]
-    [Migration("20251025115958_Init")]
+    [Migration("20251101062048_Init")]
     partial class Init
     {
         /// <inheritdoc />
@@ -200,7 +200,6 @@ namespace EcommerceSystem.API.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("QrCode")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Status")

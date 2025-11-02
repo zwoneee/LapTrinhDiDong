@@ -136,46 +136,47 @@ namespace ECommerceSystem.Api.Controllers
         [HttpGet("history")]
         public async Task<IActionResult> GetChatHistory([FromQuery] int withUserId = 0)
         {
-            var myId = GetMyId();
+            var myId = GetMyId();  // Lấy ID người dùng từ JWT token
             if (myId == 0) return Unauthorized("Không xác định được người dùng.");
 
-            bool isAdmin = User.IsInRole("Admin");
+            bool isAdmin = User.IsInRole("Admin");  // Kiểm tra người dùng có phải là admin không
             IQueryable<ChatMessage> query;
 
+            // Nếu là admin
             if (isAdmin)
             {
                 if (withUserId == 0) return BadRequest("Thiếu userId cần xem lịch sử.");
                 const int adminId = 1;
                 query = _db.ChatMessages.Where(m =>
-                    (m.FromUserId == withUserId && m.ToUserId == adminId) ||
-                    (m.FromUserId == adminId && m.ToUserId == withUserId)
+                    (m.FromUserId == withUserId && m.ToUserId == adminId) ||  // Tin nhắn gửi từ user đến admin
+                    (m.FromUserId == adminId && m.ToUserId == withUserId)     // Tin nhắn gửi từ admin đến user
                 );
             }
             else
             {
                 const int adminId = 1;
                 query = _db.ChatMessages.Where(m =>
-                    (m.FromUserId == myId && m.ToUserId == adminId) ||
-                    (m.FromUserId == adminId && m.ToUserId == myId)
+                    (m.FromUserId == myId && m.ToUserId == adminId) ||  // Tin nhắn từ user đến admin
+                    (m.FromUserId == adminId && m.ToUserId == myId)     // Tin nhắn từ admin đến user
                 );
             }
 
             var messages = await query
-                .OrderBy(m => m.SentAt)
+                .OrderBy(m => m.SentAt)  // Sắp xếp theo thời gian gửi tin nhắn
                 .Select(m => new
                 {
                     m.Id,
-                    fromUserId = m.FromUserId,   // <-- added here
-                    toUserId = m.ToUserId,       // <-- added here
+                    fromUserId = m.FromUserId,
+                    toUserId = m.ToUserId,
                     m.Content,
                     m.FileUrl,
                     m.FileType,
                     m.FileName,
-                    SentAt = m.SentAt.ToLocalTime()
+                    SentAt = m.SentAt.ToLocalTime()  // Chuyển thời gian về múi giờ địa phương
                 })
                 .ToListAsync();
 
-            return Ok(messages);
+            return Ok(messages);  // Trả về danh sách tin nhắn
         }
     }
 }

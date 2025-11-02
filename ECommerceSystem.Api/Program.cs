@@ -11,7 +11,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using StackExchange.Redis;
 using System.Security.Claims;
 using System.Text;
@@ -19,13 +21,27 @@ using Role = ECommerceSystem.Shared.Entities.Role;
 
 var builder = WebApplication.CreateBuilder(args);
 
+#region === Kestrel / URLs ===
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenAnyIP(5106); // ✅ Cho phép mọi IP truy cập http://<IP máy bạn>:5106
+    options.ListenAnyIP(7068, listenOptions =>
+    {
+        listenOptions.UseHttps();
+    });
+});
+#endregion
+
 #region === SERVICES ===
 
 // ✅ Database
 builder.Services.AddDbContext<WebDBContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        sqlOptions => sqlOptions.EnableRetryOnFailure()
+    ));
 
-// ✅ Identity + Roles
+// ✅ Identity
 builder.Services.AddIdentityCore<User>(options =>
 {
     options.Password.RequireDigit = false;
@@ -41,7 +57,7 @@ builder.Services.AddIdentityCore<User>(options =>
 .AddRoleManager<RoleManager<Role>>()
 .AddDefaultTokenProviders();
 
-// ✅ Redis (tùy chọn)
+// ✅ Redis
 var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
 if (!string.IsNullOrEmpty(redisConnectionString))
 {
@@ -71,7 +87,9 @@ builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>()
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        var secretKey = builder.Configuration["Jwt:SecretKey"] ?? throw new Exception("Missing Jwt:SecretKey in appsettings.json");
+        var secretKey = builder.Configuration["Jwt:SecretKey"]
+            ?? throw new Exception("Missing Jwt:SecretKey in appsettings.json");
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -81,23 +99,22 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
-
-            // ⚙️ BẮT BUỘC để User.IsInRole("Admin") hoạt động
             RoleClaimType = ClaimTypes.Role,
             NameClaimType = ClaimTypes.NameIdentifier
         };
 
-        // Cho phép lấy token qua query khi dùng SignalR
+        // ✅ Cho phép gửi token qua query cho SignalR
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = context =>
             {
                 var accessToken = context.Request.Query["access_token"];
                 var path = context.HttpContext.Request.Path;
-
-                if (!string.IsNullOrEmpty(accessToken) && (path.StartsWithSegments("/chathub") || path.StartsWithSegments("/commenthub")))
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    (path.StartsWithSegments("/chathub") || path.StartsWithSegments("/commenthub")))
+                {
                     context.Token = accessToken;
-
+                }
                 return Task.CompletedTask;
             }
         };
@@ -106,22 +123,27 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 // ✅ Authorization
 builder.Services.AddAuthorization();
 
-// ✅ CORS
+// ✅ CORS — Cho phép mọi nguồn để Flutter truy cập
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowMvcApp", policy =>
-    {
+    options.AddPolicy("AllowAll", policy =>
         policy.WithOrigins(
-                "https://localhost:7171",
-                "https://localhost:7068",
-                "http://localhost:5088"
+                "http://127.0.0.1:7171",
+                "https://localhost:7068", // API
+                "http://localhost:7068",
+                "https://localhost:7171", // GUI
+                "http://localhost:7171",
+                "http://localhost:5173",
+                "http://localhost:8080",
+                "http://127.0.0.1:5173",
+                "http://10.0.2.2", 
+                "http://192.168.1.5:5106" 
             )
-            .AllowAnyMethod()
             .AllowAnyHeader()
-            .AllowCredentials()
-            .SetIsOriginAllowed(_to => true); 
-    });
+            .AllowAnyMethod()
+            .AllowCredentials());
 });
+
 
 // ✅ Session
 builder.Services.AddDistributedMemoryCache();
@@ -132,7 +154,7 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
-// ✅ Dependency Injection (Repositories + Services)
+// ✅ Dependency Injection
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<UserRepository>();
@@ -143,14 +165,51 @@ builder.Services.AddScoped<ICartRepository, CartRepository>();
 // ✅ Controllers + Swagger
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new() { Title = "EcommerceSystem.API", Version = "v1" });
+
+    // 🔒 Thêm định nghĩa cho Bearer Token
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = @"JWT Authorization header.  
+                      Nhập vào đây token của bạn (VD: Bearer eyJhbGciOi...).  
+                      Lưu ý phải có chữ **Bearer** và khoảng trắng phía trước token.",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    // 🔐 Áp dụng yêu cầu xác thực mặc định cho các endpoint
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                },
+                Scheme = "oauth2",
+                Name = "Bearer",
+                In = ParameterLocation.Header
+            },
+            new List<string>()
+        }
+    });
+
+    // ✅ Thêm OperationFilter để tự động yêu cầu xác thực nếu có [Authorize]
+    c.OperationFilter<ECommerceSystem.Api.SwaggerConfig.AuthenticationRequirementsOperationFilter>();
+});
+
 
 #endregion
 
 var app = builder.Build();
 
 #region === MIDDLEWARE ===
-
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
@@ -163,28 +222,29 @@ else
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
-app.UseStaticFiles();
-app.UseIpRateLimiting();
-
-app.UseRouting();
-
-// 🔍 Debug header Authorization
-app.Use(async (context, next) =>
+// ✅ KHÔNG ép HTTPS trong development
+if (!app.Environment.IsDevelopment())
 {
-    var authHeader = context.Request.Headers["Authorization"].ToString();
-    if (!string.IsNullOrEmpty(authHeader))
-        Console.WriteLine($"🔥 Authorization Header: {authHeader}");
-    await next();
+    app.UseHttpsRedirection();
+}
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads")),
+    RequestPath = "/uploads"
 });
 
-app.UseSession();
-app.UseCors("AllowMvcApp");
+app.UseIpRateLimiting();
+app.UseRouting();
+
+app.UseCors("AllowAll");
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseSession();
 
-// ✅ Map Controllers + SignalR Hub
+// ✅ Map Controllers + SignalR
 app.MapControllers();
 app.MapHub<ChatHub>("/chathub");
 app.MapHub<CommentHub>("/commenthub");
@@ -192,7 +252,6 @@ app.MapHub<CommentHub>("/commenthub");
 #endregion
 
 #region === SEED DỮ LIỆU MẶC ĐỊNH ===
-
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -207,7 +266,6 @@ using (var scope = app.Services.CreateScope())
         logger.LogError(ex, "❌ Lỗi khi khởi tạo dữ liệu mặc định (roles/users).");
     }
 }
-
 #endregion
 
 app.Run();
